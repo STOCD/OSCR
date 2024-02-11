@@ -19,7 +19,9 @@ LogLine = namedtuple('LogLine',
         'magnitude2'))
 
 PlayerOverviewRow = namedtuple('PlayerOverviewRow',
-        ('combat_time', 
+        ('name',
+        'handle',
+        'combat_time', 
         'DPS', 
         'total_damage', 
         'crit_chance', 
@@ -217,7 +219,7 @@ class Combat():
     def player_dict(self):
         dictionary = dict()
         for player_row in self.table:
-            dictionary[f'{player_row[0]}{player_row[1]}'] = PlayerOverviewRow(*player_row[2:])
+            dictionary[f'{player_row[0]}{player_row[1]}'] = PlayerOverviewRow(*player_row)
         return dictionary
 
     @property

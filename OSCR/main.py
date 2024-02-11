@@ -206,21 +206,3 @@ class OSCR():
             raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
                                  f'Number of isolated combats: {len(self.combats)} -- '
                                  'Use OSCR.analyze_log_files() with appropriate arguments first.')
-
-if __name__ == '__main__':
-    test_parser = OSCR('combatlog.log')
-    test_parser.analyze_log_file()
-    #output = test_parser.shallow_combat_analysis(2)
-    #print(output)
-    print('end')
-    
-                
-
-
-            
-
-
-
-    
-
-    
