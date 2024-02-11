@@ -206,7 +206,7 @@ class Combat():
     '''
     Contains a single combat including raw log lines, map and combat information and shallow parse results.
     '''
-    __slots__ = ('log_data', '_map', 'date_time', 'table', 'graph_data', 'players')
+    __slots__ = ('log_data', '_map', 'date_time', 'table', 'graph_data')
 
     def __init__(self, log_lines:Optional[list[LogLine]] = None) -> None:
         self.log_data = log_lines
