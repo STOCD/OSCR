@@ -15,7 +15,7 @@ def analyze_shallow(combat:Combat, settings):
     last_graph_time = combat.log_data[0].timestamp
     graph_points = 1
     combat.table = list()
-    player_dict = dict()
+    combat.players = dict()
     for line in combat.log_data:
         # manage entites
         player_attacks = line.owner_id.startswith('P')
@@ -26,18 +26,18 @@ def analyze_shallow(combat:Combat, settings):
         target = None
         crit_flag, miss_flag, _, kill_flag = get_flags(line.flags)
         if player_attacks:
-            if not line.owner_id in player_dict:
-                player_dict[line.owner_id] = PlayerTableRow(line.owner_name, 
+            if not line.owner_id in combat.players:
+                combat.players[line.owner_id] = PlayerTableRow(line.owner_name, 
                         get_handle_from_id(line.owner_id))
-                player_dict[line.owner_id].combat_start = line.timestamp
-            attacker = player_dict[line.owner_id]
+                combat.players[line.owner_id].combat_start = line.timestamp
+            attacker = combat.players[line.owner_id]
             attacker.combat_end = line.timestamp
         if player_attacked:
-            if not line.target_id in player_dict:
-                player_dict[line.target_id] = PlayerTableRow(line.target_name,
+            if not line.target_id in combat.players:
+                combat.players[line.target_id] = PlayerTableRow(line.target_name,
                         get_handle_from_id(line.target_id))
-                player_dict[line.target_id].combat_start = line.timestamp
-            target = player_dict[line.target_id]
+                combat.players[line.target_id].combat_start = line.timestamp
+            target = combat.players[line.target_id]
             target.combat_end = line.timestamp
 
         # get table data
@@ -85,14 +85,14 @@ def analyze_shallow(combat:Combat, settings):
         
         # update graph
         if line.timestamp - last_graph_time >= graph_timedelta:
-            for player in player_dict.values():
+            for player in combat.players.values():
                 player.DMG_graph_data.append(player.damage_buffer)
                 player.damage_buffer = 0.0
                 player.graph_time.append(graph_points * graph_resolution)
             graph_points += 1
             last_graph_time = line.timestamp
     
-    for player in player_dict.values():
+    for player in combat.players.values():
         player.combat_time = (player.combat_end - player.combat_start).total_seconds()
         successful_attacks = player.total_attacks - player.misses
         try:
@@ -116,7 +116,7 @@ def analyze_shallow(combat:Combat, settings):
         DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
         player.DPS_graph_data = tuple(DPS_data / player.graph_time)
         
-    combat.table, combat.graph_data = create_overview(player_dict)
+    combat.table, combat.graph_data = create_overview(combat.players)
 
 def create_overview(player_dict:dict) -> list[list]:
     '''

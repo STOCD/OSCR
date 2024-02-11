@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "STO-OSCR"
+version = "2024.02b110"
+dependencies = [
+  "numpy"
+]
+requires-python = ">=3.7"
+authors = []
+maintainers = []
+description = "Open Source Combatlog Reader for Star Trek Online."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = []
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.optional-dependencies]
+gui = []
+cli = []
+
+[project.urls]
+Homepage = "https://github.com/STOCD/OSCR"
+Documentation = "https://readthedocs.org"
+Repository = "https://github.com/STOCD/OSCR.git"
+"Bug Tracker" = "https://github.com/STOCD/OSCR/issues"
+Changelog = ""
+
+[tool.hatch.build.targets.wheel]
+packages = ["OSCR/"]
+
+[project.scripts]
+oscr-cli = "OSCR.cli:main"
