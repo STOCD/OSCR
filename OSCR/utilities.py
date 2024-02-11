@@ -35,4 +35,4 @@ def logline_to_str(line:LogLine | str) -> str:
         return line.strip() + '\n'
     
     timestamp = datetime_to_str(line.timestamp)
-    return f'{timestamp}::{','.join(line[1:11])},{line[11]},{line[12]}\n'
+    return f'{timestamp}::{",".join(line[1:11])},{line[11]},{line[12]}\n'
