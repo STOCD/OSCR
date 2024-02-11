@@ -2,7 +2,7 @@
 
 import argparse
 
-from . import OSCR
+from OSCR import OSCR
 
 
 def summary(parser):
