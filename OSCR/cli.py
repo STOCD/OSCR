@@ -2,7 +2,7 @@
 
 import argparse
 
-from OSCR import OSCR
+import OSCR
 
 
 def summary(parser):
@@ -21,7 +21,7 @@ def main():
     parser.add_argument("-s", "--summary", action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
 
-    parser = OSCR(args.input)
+    parser = OSCR.OSCR(args.input)
     parser.analyze_log_file()
 
     if args.summary:
