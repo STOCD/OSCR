@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterable
 from datetime import datetime
 from collections import namedtuple
 
@@ -17,6 +17,77 @@ LogLine = namedtuple('LogLine',
         'flags', 
         'magnitude', 
         'magnitude2'))
+
+PlayerOverviewRow = namedtuple('PlayerOverviewRow',
+        ('combat_time', 
+        'DPS', 
+        'total_damage', 
+        'crit_chance', 
+        'max_one_hit', 
+        'debuff', 
+        'damage_share', 
+        'taken_damage_share', 
+        'attacks_in_share', 
+        'total_heals', 
+        'heal_crit_chance', 
+        'heal_share', 
+        'deaths'
+        ))
+
+class TreeModel():
+    """
+    Data model that contains a hierachical table.
+    """
+    
+    def __init__(self, header: tuple[str]):
+        self._root = TreeItem(header, None)
+
+class TreeItem():
+    """
+    Item that contains data and children optionally.
+    """
+
+    __slots__ = ('_data', '_parent', '_children')
+    
+    def __init__(self, data:tuple, parent):
+        self._data = data
+        self._parent = parent
+        self._children = list()
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: data={self._data}, parent={self._parent}, children={self._children}>'
+
+    def get_child(self, row:int):
+        try:
+            return self._children[row]
+        except IndexError:
+            return None
+    
+    def append_child(self, item):
+        self._children.append(item)
+
+    @property
+    def child_count(self):
+        return len(self._children)
+    
+    @property
+    def row(self):
+        if self._parent is not None:
+            return self._parent._children.index(self)
+        return 0
+    
+    @property
+    def column_count(self):
+        return len(self._data)
+    
+    def get_data(self, column:int):
+        try:
+            return self._data[column]
+        except IndexError:
+            return None
+    @property    
+    def parent_item(self):
+        return self._parent
 
 class PlayerTableRow():
     '''
@@ -141,6 +212,13 @@ class Combat():
         self.date_time = None
         self.table = None
         self.graph_data = None
+
+    @property
+    def player_dict(self):
+        dictionary = dict()
+        for player_row in self.table:
+            dictionary[f'{player_row[0]}{player_row[1]}'] = PlayerOverviewRow(*player_row[2:])
+        return dictionary
 
     @property
     def map(self) -> str:
