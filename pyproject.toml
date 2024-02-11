@@ -26,10 +26,8 @@ cli = []
 
 [project.urls]
 Homepage = "https://github.com/STOCD/OSCR"
-Documentation = "https://readthedocs.org"
 Repository = "https://github.com/STOCD/OSCR.git"
 "Bug Tracker" = "https://github.com/STOCD/OSCR/issues"
-Changelog = ""
 
 [tool.hatch.build.targets.wheel]
 packages = ["OSCR/"]
