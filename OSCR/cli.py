@@ -10,7 +10,7 @@ def summary(parser):
     for idx, _ in enumerate(parser.analyzed_combats):
         parser.shallow_combat_analysis(idx)
         print(f"{parser.active_combat.map}")
-        for k, v in parser.active_combat.players.items():
+        for k, v in parser.active_combat.player_dict.items():
             print(f"  {v.name}{v.handle}: {v.total_damage:,.0f} ({v.DPS:,.0f} DPS)")
 
 
