@@ -7,7 +7,6 @@ from .utilities import to_datetime, logline_to_str
 
 # currently as constant, will be some kind of import from disk or config file eventually
 MAP_IDENTIFIERS_EXISTENCE = {
-    "Space_Borg_Battleship_Raidisode_Sibrian_Elite_Initial": "Infected_Space_Elite",
     "Space_Borg_Dreadnought_Raidisode_Sibrian_Final_Boss": "Infected_Space",
     "Mission_Space_Romulan_Colony_Flagship_Lleiset": "Azure_Nebula",
     "Space_Klingon_Dreadnought_Dsc_Sarcophagus": "Battle_At_The_Binary_Stars",
@@ -30,8 +29,42 @@ MAP_IDENTIFIERS_EXISTENCE = {
     "Space_Borg_Dreadnought_Hive_Intro": "Hive_Space",
     "Mission_Space_Borg_Battleship_Queen_1_0f_2": "Hive_Space",
     "Msn_Kcw_Rura_Penthe_System_Tfo_Dilithium_Hauler": "Best_Served_Cold",
-    "Ground_Federation_Capt_Mirror_Runabout_Tfo": "Operation_Wolf"
+    "Ground_Federation_Capt_Mirror_Runabout_Tfo": "Operation_Wolf",
+    "Bluegills_Ground_Boss": "Bug_Hunt",
+    "Msn_Edren_Queue_Ground_Gorn_Lt_Tos_Range_Rock": "Miner_Instabilities",
     }
+
+# There's a possibility where there's so much overkill that the entity is
+# detected as an entity of the difficulty higher. This would be more likely to
+# happen on ground maps.
+MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
+    "Infected_Space": {
+        "Gateway": {
+            "Elite": 32000000,
+            "Advanced": 6828137,
+        },
+    },
+    "Hive_Space": {
+        "Borg Queen Octahedron": {
+            "Elite": 16040000, # TODO: Need to validate.
+            "Advanced": 3414068,
+        },
+    },
+    "Bug_Hunt": {
+        "Larval Queen": {
+            "Elite": 32567,
+        },
+        "Spawnmother": {
+            "Elite": 449432,
+        },
+    },
+    # TODO: Capture Na'kuhl Captain Hull Value (There's only one)
+    "Miner_Instabilities": {
+        "Na'kuhl Captain": {
+            "Elite": 20843,
+        },
+    },
+}
 
 def format_timestamp(timestamp:str) -> str:
     '''

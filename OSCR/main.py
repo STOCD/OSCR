@@ -12,7 +12,7 @@ TABLE_HEADER = ('Combat Time', 'DPS', 'Total Damage', 'Crit Chance', 'Max One Hi
 
 class OSCR():
 
-    version = '2024.02b111'
+    version = '2024.02b112'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
@@ -144,10 +144,10 @@ class OSCR():
                 if current_map is not None:
                     current_combat.map = current_map
                     map_identified = True
-   
+
             last_log_time = log_time
             current_combat_lines.append(current_line)
-    
+
         current_combat_lines.reverse()
         current_combat.log_data = current_combat_lines
         current_combat.date_time = last_log_time
