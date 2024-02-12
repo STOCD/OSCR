@@ -60,8 +60,8 @@ MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
     },
     # TODO: Capture Na'kuhl Captain Hull Value (There's only one)
     "Miner_Instabilities": {
-        "Na'kuhl Commander": {
-            "Elite": 6513,
+        "Na'kuhl Captain": {
+            "Elite": 20843,
         },
     },
 }
