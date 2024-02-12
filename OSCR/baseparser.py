@@ -2,9 +2,11 @@ import numpy
 from re import search as re_search
 from datetime import timedelta
 
-from .datamodels import Combat, PlayerTableRow
+from .datamodels import Combat, PlayerTableRow, ComputerTableRow
+from .iofunc import MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS
 
-HANDLE_REGEX = '^P\\[.+?@.+?(?P<handle>@.+?)\\]$'
+PLAYER_HANDLE_REGEX = '^P\\[.+?@.+?(?P<handle>@.+?)\\]$'
+COMPUTER_HANDLE_REGEX = '^C\\[(?P<handle>\d+).+?\\]$'
 
 def analyze_shallow(combat:Combat, settings):
     '''
@@ -16,6 +18,7 @@ def analyze_shallow(combat:Combat, settings):
     graph_points = 1
     combat.table = list()
     player_dict = dict()
+    computer_dict = dict()
     for line in combat.log_data:
         # manage entites
         player_attacks = line.owner_id.startswith('P')
@@ -32,12 +35,27 @@ def analyze_shallow(combat:Combat, settings):
                 player_dict[line.owner_id].combat_start = line.timestamp
             attacker = player_dict[line.owner_id]
             attacker.combat_end = line.timestamp
+        else:
+            if not line.owner_id in computer_dict:
+                computer_dict[line.owner_id] = ComputerTableRow(line.owner_name, 
+                        get_handle_from_id(line.owner_id))
+                computer_dict[line.owner_id].combat_start = line.timestamp
+            attacker = computer_dict[line.owner_id]
+            attacker.combat_end = line.timestamp
+
         if player_attacked:
             if not line.target_id in player_dict:
                 player_dict[line.target_id] = PlayerTableRow(line.target_name,
                         get_handle_from_id(line.target_id))
                 player_dict[line.target_id].combat_start = line.timestamp
             target = player_dict[line.target_id]
+            target.combat_end = line.timestamp
+        else:
+            if not line.target_id in computer_dict:
+                computer_dict[line.target_id] = ComputerTableRow(line.target_name,
+                        get_handle_from_id(line.target_id))
+                computer_dict[line.target_id].combat_start = line.timestamp
+            target = computer_dict[line.target_id]
             target.combat_end = line.timestamp
 
         # get table data
@@ -117,6 +135,9 @@ def analyze_shallow(combat:Combat, settings):
         player.DPS_graph_data = tuple(DPS_data / player.graph_time)
         
     combat.table, combat.graph_data = create_overview(player_dict)
+    combat.computer_table, combat.computer_graph_data = create_overview(computer_dict)
+    combat.difficulty = identify_difficulty(combat)
+
 
 def create_overview(player_dict:dict) -> list[list]:
     '''
@@ -167,7 +188,13 @@ def get_handle_from_id(id_str:str) -> str:
     '''
     returns player handle from is string
     '''
-    handle = re_search(HANDLE_REGEX, id_str)
+    if id_str.startswith('P'):
+        handle = re_search(PLAYER_HANDLE_REGEX, id_str)
+        if handle is None:
+            return ''
+        return handle.group('handle')
+
+    handle = re_search(COMPUTER_HANDLE_REGEX, id_str)
     if handle is None:
         return ''
     return handle.group('handle')
@@ -184,3 +211,22 @@ def get_flags(flag_str:str) -> tuple[bool]:
     flank = 'Flank' in flag_str
     kill = 'Kill' in flag_str
     return (critical_hit, miss, flank, kill)
+
+def identify_difficulty(combat:Combat) -> str:
+    '''
+    Identify combat based on the hull damage taken of a specific entity.
+    Currently this only works on entities that do not have shields as
+    total_damage_taken counts shield damage.
+
+    margin of error here is +/- 10% as not all damage seems to be recorded.
+    '''
+    hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
+    if hull_identifiers:
+        for _, entity in combat.computer_dict.items():
+            entity_map = hull_identifiers.get(entity.handle, None)
+            if entity_map:
+                for diff, damage in entity_map.items():
+                    if damage is not None and damage - entity.total_damage_taken <= entity.total_damage_taken * 0.1:
+                        return diff
+
+    return "Normal"

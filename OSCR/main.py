@@ -144,10 +144,10 @@ class OSCR():
                 if current_map is not None:
                     current_combat.map = current_map
                     map_identified = True
-   
+
             last_log_time = log_time
             current_combat_lines.append(current_line)
-    
+
         current_combat_lines.reverse()
         current_combat.log_data = current_combat_lines
         current_combat.date_time = last_log_time

@@ -7,7 +7,6 @@ from .utilities import to_datetime, logline_to_str
 
 # currently as constant, will be some kind of import from disk or config file eventually
 MAP_IDENTIFIERS_EXISTENCE = {
-    "Space_Borg_Battleship_Raidisode_Sibrian_Elite_Initial": "Infected_Space_Elite",
     "Space_Borg_Dreadnought_Raidisode_Sibrian_Final_Boss": "Infected_Space",
     "Mission_Space_Romulan_Colony_Flagship_Lleiset": "Azure_Nebula",
     "Space_Klingon_Dreadnought_Dsc_Sarcophagus": "Battle_At_The_Binary_Stars",
@@ -32,6 +31,15 @@ MAP_IDENTIFIERS_EXISTENCE = {
     "Msn_Kcw_Rura_Penthe_System_Tfo_Dilithium_Hauler": "Best_Served_Cold",
     "Ground_Federation_Capt_Mirror_Runabout_Tfo": "Operation_Wolf"
     }
+
+MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
+    "Infected_Space": {
+        "Gateway": {
+            "Elite": 32000000,
+            "Advanced": 7200000,
+        },
+    },
+}
 
 def format_timestamp(timestamp:str) -> str:
     '''
