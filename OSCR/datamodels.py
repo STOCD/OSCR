@@ -383,7 +383,7 @@ class Combat():
     @property
     def difficulty(self) -> str:
         if self._difficulty is None:
-            return 'Normal'
+            return ''
         return self._difficulty
     
     @difficulty.setter

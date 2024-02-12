@@ -36,7 +36,8 @@ class OSCR():
         '''
         Contains tuple with available combats.
         '''
-        return tuple([f'{c.map} {datetime_to_display(c.date_time)}' for c in self.combats])
+        return tuple(f'{c.map}{' ' + c.difficulty} {datetime_to_display(c.date_time)}' 
+                for c in self.combats)
     
     @property
     def active_combat(self) -> Combat | None:
@@ -70,7 +71,8 @@ class OSCR():
 
     def identfy_map(self, entity_id:str) -> str | None:
         '''
-        Identify map by checking whether the entity supplied identifies a map. Returns map name or None.
+        Identify map by checking whether the entity supplied identifies a map. Returns map name and 
+        difficulty or None.
         '''
         try:
             clean_entity_id = entity_id.split(' ', maxsplit=1)[1].split(']', maxsplit=1)[0]
@@ -79,6 +81,19 @@ class OSCR():
         if clean_entity_id in MAP_IDENTIFIERS_EXISTENCE:
             return MAP_IDENTIFIERS_EXISTENCE[clean_entity_id]
         return None      
+
+    def identify_difficulty(self, entity_id: str, id_list: tuple) -> str | None:
+        '''
+        Identify difficulty by checking whether the entity supplied identifies a map including difficulty.
+        Returns map and difficulty or None.
+        '''
+        try:
+            clean_entity_id = entity_id.split(' ', maxsplit=1)[1].split(']', maxsplit=1)[0]
+        except IndexError:
+            return None
+        if clean_entity_id in id_list:
+            return MAP_IDENTIFIERS_EXISTENCE[clean_entity_id][1]
+        return None
 
     def analyze_log_file(self, total_combats:int | None = None, extend:bool = False, 
             log_path:str | None = None):
@@ -114,6 +129,8 @@ class OSCR():
         current_combat_lines = list()
         current_combat = None
         map_identified = False
+        difficulty_identified = True
+        difficulty_identifiers = None
         last_log_time = to_datetime(log_lines[0].split('::')[0]) + 2 * combat_delta
 
         for line_num, line in enumerate(log_lines):
@@ -142,8 +159,19 @@ class OSCR():
             if not map_identified:
                 current_map = self.identfy_map(current_line.target_id)
                 if current_map is not None:
-                    current_combat.map = current_map
+                    if current_map[1] is None:
+                        current_combat.map = current_map[0]
+                        difficulty_identified = False
+                        difficulty_identifiers = current_map[2] 
+                    else:
+                        current_combat.map = current_map[0]
+                        current_combat.difficulty = current_map[1]
                     map_identified = True
+            if not difficulty_identified:
+                current_difficulty = self.identify_difficulty(current_line.target_id, difficulty_identifiers)
+                if current_difficulty is not None:
+                    current_combat.difficulty = current_difficulty
+                    difficulty_identified = True
 
             last_log_time = log_time
             current_combat_lines.append(current_line)
