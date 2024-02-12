@@ -16,7 +16,7 @@ def summary(parser):
 
         print(f"  NPCs (Damage Taken)")
         for k, v in parser.active_combat.computer_dict.items():
-            print(f"    {v.name} - {v.handle}: {v.total_damage_taken:,.0f}")
+            print(f"    {v.name} - {v.handle}: tot={v.total_damage_taken:,.0f} hull={v.total_hull_damage_taken:,.0f} shield={v.total_shield_damage_taken:,.0f}")
 
 def main():
     """Main"""

@@ -83,6 +83,10 @@ def analyze_shallow(combat:Combat, settings):
             magnitude = abs(line.magnitude)
             try:
                 target.total_damage_taken += magnitude
+                if line.type == 'Shield':
+                    target.total_shield_damage_taken += magnitude
+                else:
+                    target.total_hull_damage_taken += magnitude
                 target.attacks_in_num += 1
             except AttributeError:
                 pass
@@ -215,10 +219,7 @@ def get_flags(flag_str:str) -> tuple[bool]:
 def identify_difficulty(combat:Combat) -> str:
     '''
     Identify combat based on the hull damage taken of a specific entity.
-    Currently this only works on entities that do not have shields as
-    total_damage_taken counts shield damage.
-
-    margin of error here is +/- 10% as not all damage seems to be recorded.
+    margin of error here is +/- 10% to detect over/underkill
     '''
     hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
     if hull_identifiers:
@@ -226,7 +227,7 @@ def identify_difficulty(combat:Combat) -> str:
             entity_map = hull_identifiers.get(entity.handle, None)
             if entity_map:
                 for diff, damage in entity_map.items():
-                    if damage is not None and damage - entity.total_damage_taken <= entity.total_damage_taken * 0.1:
+                    if damage is not None and abs(damage - entity.total_hull_damage_taken) <= entity.total_hull_damage_taken * 0.1:
                         return diff
 
     return "Normal"

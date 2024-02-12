@@ -38,6 +38,8 @@ PlayerOverviewRow = namedtuple('PlayerOverviewRow',
         'heal_num',
         'crit_num',
         'total_damage_taken',
+        'total_hull_damage_taken',
+        'total_shield_damage_taken',
         'attacks_in_num',
         'total_attacks',
         'hull_attacks',
@@ -65,6 +67,8 @@ ComputerOverviewRow = namedtuple('ComputerOverviewRow',
         'heal_num',
         'crit_num',
         'total_damage_taken',
+        'total_hull_damage_taken',
+        'total_shield_damage_taken',
         'attacks_in_num',
         'total_attacks',
         'hull_attacks',
@@ -135,9 +139,9 @@ class PlayerTableRow():
     __slots__ = ('name', 'handle', 'combat_time', 'DPS', 'total_damage', 'crit_chance', 'max_one_hit', 
             'debuff', 'damage_share', 'taken_damage_share', 'attacks_in_share', 'total_heals', 
             'heal_crit_chance', 'heal_share', 'deaths', 'heal_crit_num', 'heal_num', 'crit_num', 
-            'total_damage_taken', 'attacks_in_num', 'total_attacks', 'hull_attacks', 'resistance_sum', 
-            'misses', 'DMG_graph_data', 'DPS_graph_data', 'graph_time', 'damage_buffer', 'combat_start',
-            'combat_end')
+            'total_damage_taken', 'total_hull_damage_taken', 'total_shield_damage_taken', 'attacks_in_num', 
+            'total_attacks', 'hull_attacks', 'resistance_sum', 'misses', 'DMG_graph_data', 'DPS_graph_data', 
+            'graph_time', 'damage_buffer', 'combat_start', 'combat_end')
     
     def __init__(self, name:str, handle:str):
         self.name: str = name
@@ -160,6 +164,8 @@ class PlayerTableRow():
         self.heal_num: int = 0
         self.crit_num: int = 0
         self.total_damage_taken: float = 0.0
+        self.total_hull_damage_taken: float = 0.0
+        self.total_shield_damage_taken: float = 0.0
         self.attacks_in_num: int = 0
         self.total_attacks: int = 0
         self.hull_attacks: int = 0
@@ -200,11 +206,13 @@ class PlayerTableRow():
             case 16: return self.heal_num
             case 17: return self.crit_num
             case 18: return self.total_damage_taken
-            case 19: return self.attacks_in_num
-            case 20: return self.total_attacks
-            case 21: return self.hull_attacks
-            case 22: return self.resistance_sum
-            case 23: return self.misses
+            case 19: return self.total_hull_damage_taken
+            case 20: return self.total_shield_damage_taken
+            case 21: return self.attacks_in_num
+            case 22: return self.total_attacks
+            case 23: return self.hull_attacks
+            case 24: return self.resistance_sum
+            case 25: return self.misses
             case _: raise StopIteration()
 
 class ComputerTableRow():
@@ -214,9 +222,9 @@ class ComputerTableRow():
     __slots__ = ('name', 'handle', 'combat_time', 'DPS', 'total_damage', 'crit_chance', 'max_one_hit', 
             'debuff', 'damage_share', 'taken_damage_share', 'attacks_in_share', 'total_heals', 
             'heal_crit_chance', 'heal_share', 'deaths', 'heal_crit_num', 'heal_num', 'crit_num', 
-            'total_damage_taken', 'attacks_in_num', 'total_attacks', 'hull_attacks', 'resistance_sum', 
-            'misses', 'DMG_graph_data', 'DPS_graph_data', 'graph_time', 'damage_buffer', 'combat_start',
-            'combat_end')
+            'total_damage_taken', 'total_hull_damage_taken', 'total_shield_damage_taken', 'attacks_in_num', 
+            'total_attacks', 'hull_attacks', 'resistance_sum', 'misses', 'DMG_graph_data', 'DPS_graph_data', 
+            'graph_time', 'damage_buffer', 'combat_start', 'combat_end')
     
     def __init__(self, handle:str, name:str):
         self.name: str = name
@@ -239,6 +247,8 @@ class ComputerTableRow():
         self.heal_num: int = 0
         self.crit_num: int = 0
         self.total_damage_taken: float = 0.0
+        self.total_hull_damage_taken: float = 0.0
+        self.total_shield_damage_taken: float = 0.0
         self.attacks_in_num: int = 0
         self.total_attacks: int = 0
         self.hull_attacks: int = 0
@@ -279,11 +289,13 @@ class ComputerTableRow():
             case 16: return self.heal_num
             case 17: return self.crit_num
             case 18: return self.total_damage_taken
-            case 19: return self.attacks_in_num
-            case 20: return self.total_attacks
-            case 21: return self.hull_attacks
-            case 22: return self.resistance_sum
-            case 23: return self.misses
+            case 19: return self.total_hull_damage_taken
+            case 20: return self.total_shield_damage_taken
+            case 21: return self.attacks_in_num
+            case 22: return self.total_attacks
+            case 23: return self.hull_attacks
+            case 24: return self.resistance_sum
+            case 25: return self.misses
             case _: raise StopIteration()
 
 

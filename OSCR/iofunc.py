@@ -46,7 +46,7 @@ MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
     },
     "Hive_Space": {
         "Borg Queen Octahedron": {
-            "Elite": 32000000,
+            "Elite": 0,
             "Advanced": 3414068,
         },
     },
