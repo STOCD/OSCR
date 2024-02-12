@@ -12,7 +12,7 @@ TABLE_HEADER = ('Combat Time', 'DPS', 'Total Damage', 'Crit Chance', 'Max One Hi
 
 class OSCR():
 
-    version = '2024.02b111'
+    version = '2024.02b112'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
