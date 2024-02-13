@@ -7,8 +7,11 @@ from .iofunc import get_combat_log_data, split_log_by_lines, reset_temp_folder
 from .utilities import to_datetime, datetime_to_display
 from .baseparser import analyze_shallow
 
-TABLE_HEADER = ('Combat Time', 'DPS', 'Total Damage', 'Crit Chance', 'Max One Hit', 'Debuff', 'Damage Share',
-        'Taken Damage Share', 'Attacks-in Share', 'Total Heals', 'Heal Crit Chance', 'Heals Share', 'Deaths')
+TABLE_HEADER = ('Combat Time', 'DPS', 'Total Damage', 'Debuff', 'Attacks-in Share', 'Taken Damage Share', 
+        'Damage Share', 'Max One Hit', 'Crit Chance', 'Deaths', 'Total Heals', 'Heal Share', 
+        'Heal Crit Chance', 'Total Damage Taken', 'Total Hull Damage Taken', 'Total Shield Damage Taken',
+        'Total Attacks', 'Hull Attacks', 'Attacks-in Number', 'Heal Crit Number', 'Heal Number', 
+        'Crit Number', 'Misses')
 
 class OSCR():
 

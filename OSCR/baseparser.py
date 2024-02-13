@@ -2,11 +2,11 @@ import numpy
 from re import search as re_search
 from datetime import timedelta
 
-from .datamodels import Combat, PlayerTableRow, ComputerTableRow
+from .datamodels import Combat, OverviewTableRow, OverviewTableRow
 from .iofunc import MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS
 
 PLAYER_HANDLE_REGEX = '^P\\[.+?@.+?(?P<handle>@.+?)\\]$'
-COMPUTER_HANDLE_REGEX = '^C\\[(?P<handle>\d+).+?\\]$'
+COMPUTER_HANDLE_REGEX = '^C\\[(?P<handle>\\d+).+?\\]$'
 
 def analyze_shallow(combat:Combat, settings):
     '''
@@ -30,14 +30,14 @@ def analyze_shallow(combat:Combat, settings):
         crit_flag, miss_flag, _, kill_flag = get_flags(line.flags)
         if player_attacks:
             if not line.owner_id in player_dict:
-                player_dict[line.owner_id] = PlayerTableRow(line.owner_name, 
+                player_dict[line.owner_id] = OverviewTableRow(line.owner_name, 
                         get_handle_from_id(line.owner_id))
                 player_dict[line.owner_id].combat_start = line.timestamp
             attacker = player_dict[line.owner_id]
             attacker.combat_end = line.timestamp
         else:
             if not line.owner_id in computer_dict:
-                computer_dict[line.owner_id] = ComputerTableRow(line.owner_name, 
+                computer_dict[line.owner_id] = OverviewTableRow(line.owner_name, 
                         get_handle_from_id(line.owner_id))
                 computer_dict[line.owner_id].combat_start = line.timestamp
             attacker = computer_dict[line.owner_id]
@@ -45,14 +45,14 @@ def analyze_shallow(combat:Combat, settings):
 
         if player_attacked:
             if not line.target_id in player_dict:
-                player_dict[line.target_id] = PlayerTableRow(line.target_name,
+                player_dict[line.target_id] = OverviewTableRow(line.target_name,
                         get_handle_from_id(line.target_id))
                 player_dict[line.target_id].combat_start = line.timestamp
             target = player_dict[line.target_id]
             target.combat_end = line.timestamp
         else:
             if not line.target_id in computer_dict:
-                computer_dict[line.target_id] = ComputerTableRow(line.target_name,
+                computer_dict[line.target_id] = OverviewTableRow(line.target_name,
                         get_handle_from_id(line.target_id))
                 computer_dict[line.target_id].combat_start = line.timestamp
             target = computer_dict[line.target_id]
@@ -60,50 +60,35 @@ def analyze_shallow(combat:Combat, settings):
 
         # get table data
         if miss_flag:
-            try:
-                attacker.misses += 1
-            except AttributeError:
-                pass
+            attacker.misses += 1
         if kill_flag:
-            try:
-                target.deaths += 1
-            except AttributeError:
-                pass
+            target.deaths += 1
         
         if ((line.type == 'Shield' and line.magnitude < 0 and line.magnitude2 >= 0) 
                         or line.type == 'HitPoints'):
-            try:
-                attacker.total_heals += abs(line.magnitude)
-                attacker.heal_num += 1
-                if crit_flag:
-                    attacker.heal_crit_num += 1
-            except AttributeError:
-                pass
+            attacker.total_heals += abs(line.magnitude)
+            attacker.heal_num += 1
+            if crit_flag:
+                attacker.heal_crit_num += 1
         else:
             magnitude = abs(line.magnitude)
-            try:
-                target.total_damage_taken += magnitude
-                if line.type == 'Shield':
-                    target.total_shield_damage_taken += magnitude
-                else:
-                    target.total_hull_damage_taken += magnitude
-                target.attacks_in_num += 1
-            except AttributeError:
-                pass
-            try:
-                attacker.total_attacks += 1
-                attacker.total_damage += magnitude
-                attacker.damage_buffer += magnitude
-                if crit_flag:
-                    attacker.crit_num += 1
-                if magnitude > attacker.max_one_hit:
-                    attacker.max_one_hit = magnitude
-                if not line.type == 'Shield' and not miss_flag:
-                    if line.magnitude != 0 and line.magnitude2 != 0:
-                        attacker.resistance_sum += line.magnitude / line.magnitude2
-                        attacker.hull_attacks += 1
-            except AttributeError:
-                pass
+            target.total_damage_taken += magnitude
+            if line.type == 'Shield':
+                target.total_shield_damage_taken += magnitude
+            else:
+                target.total_hull_damage_taken += magnitude
+            target.attacks_in_num += 1
+            attacker.total_attacks += 1
+            attacker.total_damage += magnitude
+            attacker.damage_buffer += magnitude
+            if crit_flag:
+                attacker.crit_num += 1
+            if magnitude > attacker.max_one_hit:
+                attacker.max_one_hit = magnitude
+            if not line.type == 'Shield' and not miss_flag:
+                if line.magnitude != 0 and line.magnitude2 != 0:
+                    attacker.resistance_sum += line.magnitude / line.magnitude2
+                    attacker.hull_attacks += 1
         
         # update graph
         if line.timestamp - last_graph_time >= graph_timedelta:
@@ -139,8 +124,7 @@ def analyze_shallow(combat:Combat, settings):
         player.DPS_graph_data = tuple(DPS_data / player.graph_time)
         
     combat.table, combat.graph_data = create_overview(player_dict)
-    combat.computer_table, combat.computer_graph_data = create_overview(computer_dict)
-    combat.difficulty = identify_difficulty(combat)
+    combat.difficulty = identify_difficulty(combat, computer_dict)
 
 
 def create_overview(player_dict:dict) -> list[list]:
@@ -216,7 +200,7 @@ def get_flags(flag_str:str) -> tuple[bool]:
     kill = 'Kill' in flag_str
     return (critical_hit, miss, flank, kill)
 
-def identify_difficulty(combat:Combat) -> str:
+def identify_difficulty(combat: Combat, computer_dict: dict) -> str:
     '''
     Identify combat based on the hull damage taken of a specific entity.
 
@@ -227,11 +211,12 @@ def identify_difficulty(combat:Combat) -> str:
 
     hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
     if hull_identifiers:
-        for _, entity in combat.computer_dict.items():
+        for _, entity in computer_dict.items():
             entity_map = hull_identifiers.get(entity.handle, None)
             if entity_map:
                 for diff, damage in entity_map.items():
-                    if damage is not None and abs(damage - entity.total_hull_damage_taken) <= entity.total_hull_damage_taken * 0.1:
+                    if damage is not None and abs(damage - entity.total_hull_damage_taken) <= \
+                            entity.total_hull_damage_taken * 0.1:
                         difficulty = diff
                         break
 
