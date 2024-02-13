@@ -223,8 +223,6 @@ def identify_difficulty(combat:Combat) -> str:
     margin of error for damage taken is +/- 10% to detect over/underkill
     '''
 
-    diff_hull = ""
-    diff_count = ""
     difficulty = "Unknown"
 
     hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
