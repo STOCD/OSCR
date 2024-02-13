@@ -36,7 +36,7 @@ class OSCR():
         '''
         Contains tuple with available combats.
         '''
-        return tuple(f'{c.map}{' ' + c.difficulty} {datetime_to_display(c.date_time)}' 
+        return tuple(f'{c.map}{" " + c.difficulty} {datetime_to_display(c.date_time)}' 
                 for c in self.combats)
     
     @property

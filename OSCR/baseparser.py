@@ -219,8 +219,12 @@ def get_flags(flag_str:str) -> tuple[bool]:
 def identify_difficulty(combat:Combat) -> str:
     '''
     Identify combat based on the hull damage taken of a specific entity.
-    margin of error here is +/- 10% to detect over/underkill
+
+    margin of error for damage taken is +/- 10% to detect over/underkill
     '''
+
+    difficulty = "Unknown"
+
     hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
     if hull_identifiers:
         for _, entity in combat.computer_dict.items():
@@ -228,6 +232,7 @@ def identify_difficulty(combat:Combat) -> str:
             if entity_map:
                 for diff, damage in entity_map.items():
                     if damage is not None and abs(damage - entity.total_hull_damage_taken) <= entity.total_hull_damage_taken * 0.1:
-                        return diff
+                        difficulty = diff
+                        break
 
-    return "Normal"
+    return difficulty
