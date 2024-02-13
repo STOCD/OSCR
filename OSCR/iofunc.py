@@ -40,19 +40,19 @@ MAP_IDENTIFIERS_EXISTENCE = {
 # detected as an entity of the difficulty higher. This would be more likely to
 # happen on ground maps.
 MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
-    "Infected_Space": {
+    "Infected Space": {
         "Gateway": {
             "Elite": 32000000,
             "Advanced": 6828137,
         },
     },
-    "Hive_Space": {
+    "Hive Space": {
         "Borg Queen Octahedron": {
             "Elite": 16040000, # TODO: Need to validate.
             "Advanced": 3414068,
         },
     },
-    "Bug_Hunt": {
+    "Bug Hunt": {
         "Larval Queen": {
             "Elite": 32567,
         },
@@ -61,7 +61,7 @@ MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
         },
     },
     # TODO: Capture Na'kuhl Captain Hull Value (There's only one)
-    "Miner_Instabilities": {
+    "Miner Instabilities": {
         "Na'kuhl Captain": {
             "Elite": 20843,
         },
