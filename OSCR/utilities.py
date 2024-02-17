@@ -1,6 +1,10 @@
 from datetime import datetime
+from re import search as re_search
 
 from .datamodels import LogLine
+
+PLAYER_HANDLE_REGEX = '^P\\[.+?@.+?(?P<handle>@.+?)\\]$'
+COMPUTER_HANDLE_REGEX = '^C\\[(?P<handle>\\d+).+?\\]$'
 
 def to_datetime(date_time:str) -> datetime:
     '''
@@ -36,3 +40,19 @@ def logline_to_str(line:LogLine | str) -> str:
     
     timestamp = datetime_to_str(line.timestamp)
     return f'{timestamp}::{",".join(line[1:11])},{line[11]},{line[12]}\n'
+
+def get_handle_from_id(id_str:str) -> str:
+    '''
+    returns player handle from is string
+    '''
+    if id_str.startswith('P'):
+        handle = re_search(PLAYER_HANDLE_REGEX, id_str)
+        if handle is None:
+            return ''
+        return handle.group('handle')
+
+    handle = re_search(COMPUTER_HANDLE_REGEX, id_str)
+    if handle is None:
+        return ''
+    # the space is intentional to allow for fancy concatenation of name and handle
+    return f' {handle.group('handle')}'

@@ -1,12 +1,9 @@
 import numpy
-from re import search as re_search
 from datetime import timedelta
 
 from .datamodels import Combat, OverviewTableRow, OverviewTableRow
 from .iofunc import MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS
-
-PLAYER_HANDLE_REGEX = '^P\\[.+?@.+?(?P<handle>@.+?)\\]$'
-COMPUTER_HANDLE_REGEX = '^C\\[(?P<handle>\\d+).+?\\]$'
+from .utilities import get_handle_from_id
 
 def analyze_shallow(combat:Combat, settings):
     '''
@@ -27,7 +24,7 @@ def analyze_shallow(combat:Combat, settings):
             continue
         attacker = None
         target = None
-        crit_flag, miss_flag, _, kill_flag = get_flags(line.flags)
+        crit_flag, miss_flag, kill_flag = get_flags(line.flags)
         if player_attacks:
             if not line.owner_id in player_dict:
                 player_dict[line.owner_id] = OverviewTableRow(line.owner_name, 
@@ -101,9 +98,9 @@ def analyze_shallow(combat:Combat, settings):
     
     for player in player_dict.values():
         player.combat_time = (player.combat_end - player.combat_start).total_seconds()
-        successful_attacks = player.total_attacks - player.misses
+        successful_attacks = player.hull_attacks - player.misses
         try:
-            player.debuff = player.resistance_sum / player.hull_attacks * 100
+            player.debuff = player.resistance_sum / successful_attacks * 100
         except ZeroDivisionError:
             player.debuff = 0.0
         try:
@@ -125,7 +122,6 @@ def analyze_shallow(combat:Combat, settings):
         
     combat.table, combat.graph_data = create_overview(player_dict)
     combat.difficulty = identify_difficulty(combat, computer_dict)
-
 
 def create_overview(player_dict:dict) -> list[list]:
     '''
@@ -172,33 +168,16 @@ def create_overview(player_dict:dict) -> list[list]:
     table.sort(key=lambda x: x[0])
     return (table, (graph_time, DPS_graph_data, DMG_graph_data))
 
-def get_handle_from_id(id_str:str) -> str:
-    '''
-    returns player handle from is string
-    '''
-    if id_str.startswith('P'):
-        handle = re_search(PLAYER_HANDLE_REGEX, id_str)
-        if handle is None:
-            return ''
-        return handle.group('handle')
-
-    handle = re_search(COMPUTER_HANDLE_REGEX, id_str)
-    if handle is None:
-        return ''
-    return handle.group('handle')
-
-
 def get_flags(flag_str:str) -> tuple[bool]:
     '''
     Returns flags from flag field of log line.
 
-    Return: (critical_hit, miss, flank, kill)
+    :return: (critical_hit, miss, kill)
     '''
     critical_hit = 'Critical' in flag_str
     miss = 'Miss' in flag_str
-    flank = 'Flank' in flag_str
     kill = 'Kill' in flag_str
-    return (critical_hit, miss, flank, kill)
+    return (critical_hit, miss, kill)
 
 def identify_difficulty(combat: Combat, computer_dict: dict) -> str:
     '''

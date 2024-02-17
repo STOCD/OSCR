@@ -6,16 +6,11 @@ from .iofunc import MAP_IDENTIFIERS_EXISTENCE
 from .iofunc import get_combat_log_data, split_log_by_lines, reset_temp_folder
 from .utilities import to_datetime, datetime_to_display
 from .baseparser import analyze_shallow
-
-TABLE_HEADER = ('Combat Time', 'DPS', 'Total Damage', 'Debuff', 'Attacks-in Share', 'Taken Damage Share', 
-        'Damage Share', 'Max One Hit', 'Crit Chance', 'Deaths', 'Total Heals', 'Heal Share', 
-        'Heal Crit Chance', 'Total Damage Taken', 'Total Hull Damage Taken', 'Total Shield Damage Taken',
-        'Total Attacks', 'Hull Attacks', 'Attacks-in Number', 'Heal Crit Number', 'Heal Number', 
-        'Crit Number', 'Misses')
+from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b112'
+    version = '2024.02b170'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
@@ -230,10 +225,15 @@ class OSCR():
         try:
             combat = self.combats[combat_num]
             if combat.table is None or combat.graph_data is None:
-                analyze_shallow(self.combats[combat_num], self._settings)
+                analyze_shallow(combat, self._settings)
             self.combats_pointer = combat_num
             return (combat.table, combat.graph_data)
         except IndexError:
             raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
                                  f'Number of isolated combats: {len(self.combats)} -- '
                                  'Use OSCR.analyze_log_files() with appropriate arguments first.')
+        
+    def full_combat_analysis(self, combat_num: int):
+        combat = self.combats[combat_num]
+        out = analyze_combat(combat, self._settings)
+        return out._root
