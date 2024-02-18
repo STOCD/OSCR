@@ -55,4 +55,4 @@ def get_handle_from_id(id_str:str) -> str:
     if handle is None:
         return ''
     # the space is intentional to allow for fancy concatenation of name and handle
-    return f' {handle.group('handle')}'
+    return f' {handle.group("handle")}'

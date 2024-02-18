@@ -4,19 +4,17 @@ import argparse
 
 import OSCR
 
+
 def summary(parser):
     """Print the combat summary for each combat"""
     for idx, _ in enumerate(parser.analyzed_combats):
         parser.shallow_combat_analysis(idx)
         print(f"{parser.active_combat.map} - {parser.active_combat.difficulty}")
 
-        print(f"  Players (Damage)")
+        print("  Players (Damage)")
         for k, v in parser.active_combat.player_dict.items():
             print(f"    {v.name}{v.handle}: {v.total_damage:,.0f} ({v.DPS:,.0f} DPS)")
 
-        print(f"  NPCs (Damage Taken)")
-        for k, v in parser.active_combat.computer_dict.items():
-            print(f"    {v.name} - {v.handle}: tot={v.total_damage_taken:,.0f} hull={v.total_hull_damage_taken:,.0f} shield={v.total_shield_damage_taken:,.0f}")
 
 def main():
     """Main"""
