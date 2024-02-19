@@ -81,7 +81,7 @@ def analyze_combat(combat: Combat, settings: dict) -> TreeItem:
                 ability_target.total_hull_damage += magnitude
                 if not miss_flag and magnitude != 0 and magnitude2 != 0:
                     ability_target.resistance_sum += magnitude / magnitude2
-                    ability_target.hull_attacks += 1
+                ability_target.hull_attacks += 1
             ability_target.total_attacks += 1
             if crit_flag:
                 ability_target.crit_num += 1
