@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from .datamodels import Combat, TreeItem, TreeModel, AnalysisTableRow
 from . import TREE_HEADER
-from .utilities import get_handle_from_id
+from .utilities import get_handle_from_id, bundle
 
 def analyze_combat(combat: Combat, settings: dict) -> TreeItem:
     """
@@ -41,10 +41,10 @@ def analyze_combat(combat: Combat, settings: dict) -> TreeItem:
             if attacker_id in data.pet_index:
                 attacker = data.pet_index[attacker_id]
             else:
-                attacker = data.add_pet(line.source_id + 
+                attacker = data.add_pet(line.source_name + 
                         get_handle_from_id(line.source_id), attacker_id, attacker)
         
-        ability_id = line.event_id
+        ability_id = line.event_name
         if ability_id in data.ability_index[attacker_id]:
             ability = data.ability_index[attacker_id][ability_id]
         else:
@@ -81,13 +81,14 @@ def analyze_combat(combat: Combat, settings: dict) -> TreeItem:
                 ability_target.total_hull_damage += magnitude
                 if not miss_flag and magnitude != 0 and magnitude2 != 0:
                     ability_target.resistance_sum += magnitude / magnitude2
-                    ability_target.hull_attacks += 1
+                ability_target.hull_attacks += 1
             ability_target.total_attacks += 1
             if crit_flag:
                 ability_target.crit_num += 1
             if magnitude > ability_target.max_one_hit:
                 ability_target.max_one_hit = magnitude
-                
+    
+    merge_single_lines(data)
     complete_tree(data)
     return data
 
@@ -177,35 +178,81 @@ def combine_children_stats(item: TreeItem) -> tuple:
             combined_data.append(sum(column))
     return tuple(combined_data)
 
-def complete_tree(tree_model: TreeModel) -> TreeModel:
+def merge_single_lines(tree_model: TreeModel):
+    '''
+    Eliminates one level of depth if needed by merging lines that only have a single child. For example:
+
+    v Quantum Mines
+        v Quantum Mine 34 
+            > Mine Explosion
+        v Quantum Mine 25
+            > Mine Explosion
+
+    becomes:\n
+    v Quantum Mines - Mine Explosion\n
+       > Quantum Mine 34\n
+       > Quantum Mine 25
+
+
+    Parameters:
+    - :param tree_model: tree model to analyze and improve
+    '''
+    for player in tree_model._player._children:
+        new_pet_groups = dict()
+
+        for ability_or_petgroup in player._children:
+            if ability_or_petgroup._children[0].child_count == 0:
+                continue
+
+            for pet in reversed(ability_or_petgroup._children):
+                if pet.child_count == 1:
+                    ability_name = pet._children[0].data
+                    if ability_or_petgroup.data == ability_name:
+                        new_pet_group_name = ability_name
+                    else:
+                        new_pet_group_name = f'{ability_or_petgroup.data} – {ability_name}'
+                    if new_pet_group_name in new_pet_groups:
+                        new_pet_group = new_pet_groups[new_pet_group_name]
+                    else:
+                        new_pet_group = TreeItem(new_pet_group_name, player)
+                        new_pet_groups[new_pet_group_name] = new_pet_group
+                    new_pet_group.append_child(pet)
+                    ability_or_petgroup._children.remove(pet)
+                    pet.parent = new_pet_group
+                    pet._children = pet._children[0]._children
+
+                    for target in pet._children:
+                        target.parent = pet
+
+            if ability_or_petgroup.child_count == 0:
+                ability_or_petgroup.parent._children.remove(ability_or_petgroup)
+
+        for new_pet_group in new_pet_groups.values():
+            player.append_child(new_pet_group)
+
+def complete_sub_tree(item: TreeItem, combat_time):
+    '''
+    Recursive function merging data from the bottom up.
+
+    Parameters:
+    - :param item: item to complete
+    '''
+    for child in item._children:
+        if child.child_count == 0:
+            child.data = calculate_row_stats(child.data, combat_time)
+        else:
+            complete_sub_tree(child, combat_time)
+    item.data = combine_children_stats(item)
+
+
+def complete_tree(tree_model: TreeModel):
     '''
     Merges the data from the bottom up to fill all lines.
 
     Parameters:
     - :param tree_model: tree model to be completed
-
-    :return: completed tree model
     '''
-    combat_times = dict()
-    for actor_id, actor in tree_model.actor_index.items():
+    for actor in bundle(tree_model._player._children, tree_model._npc._children):
         current_combat_time = round((actor.data.combat_end - actor.data.combat_start).total_seconds(), 1)
         actor.data.combat_time = current_combat_time
-        combat_times[actor_id[0]] = current_combat_time
-
-    for actor_id, actor_subdict in tree_model.target_index.items():
-        current_combat_time = combat_times[actor_id[0]]
-        for ability_subdict in actor_subdict.values():
-            for target in ability_subdict.values():
-                target.data = calculate_row_stats(target.data, current_combat_time)
-
-        for ability in tree_model.ability_index[actor_id].values():
-            ability.data = combine_children_stats(ability)
-
-    for pet in tree_model.pet_index.values():
-        pet.data = combine_children_stats(pet)
-
-    for pet_group in tree_model.pet_group_index.values():
-        pet_group.data = combine_children_stats(pet_group)
-
-    for actor in tree_model.actor_index.values():
-        actor.data = combine_children_stats(actor)
+        complete_sub_tree(actor, current_combat_time)

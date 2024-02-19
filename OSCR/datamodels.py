@@ -146,7 +146,7 @@ class AnalysisTableRow():
 
         """
         # commented attributes represent additional fields in the final result, but are not required here
-        self.name: str = name
+        self.name: str = name if name else '*'
         self.handle: str = handle
         # self.DPS: float = 0.0
         self.total_damage: float = 0.0
@@ -217,7 +217,7 @@ class TreeItem():
         self._children = list()
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: data={self.data}, parent={self.parent}>'
+        return f'<{self.__class__.__name__}: data={self.data}>'
     
     def __iter__(self):
         return iter(self.data)

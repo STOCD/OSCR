@@ -10,7 +10,7 @@ from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b180'
+    version = '2024.02b191'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path

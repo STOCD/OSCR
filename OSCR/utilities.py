@@ -1,5 +1,6 @@
 from datetime import datetime
 from re import search as re_search
+from typing import Generator, Iterable
 
 from .datamodels import LogLine
 
@@ -56,3 +57,26 @@ def get_handle_from_id(id_str:str) -> str:
         return ''
     # the space is intentional to allow for fancy concatenation of name and handle
     return f' {handle.group("handle")}'
+
+def reversed_index(length: int) -> Generator[int, None, None]:
+    '''
+    Generator that yields the indices for an iterable with given length in reversed order.
+
+    Parameters:
+    - :param length: length of the iterable
+    '''
+    counter = length
+    while counter > 0:
+        counter -= 1
+        yield counter
+
+def bundle(*iterables: Iterable) -> Generator:
+    """
+    Generator yielding the items of the given iterables in the order they were provided.
+
+    Parameters:
+    - :param iterables: iterables to be bundled
+    """
+    for inner_iterable in iterables:
+        for element in inner_iterable:
+            yield element
