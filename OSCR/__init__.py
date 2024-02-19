@@ -12,3 +12,4 @@ TREE_HEADER = ('', 'DPS', 'Total Damage', 'Debuff', 'Max One Hit', 'Crit Chance'
         'Shield Attacks') #, 'Hull Resistance', 'Shield Resistance')
 
 from .main import OSCR
+from .datamodels import TreeItem
