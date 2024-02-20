@@ -100,33 +100,38 @@ class OverviewTableRow():
         return 25
     
     def __getitem__(self, position):
-        match position:
-            case 0: return self.name
-            case 1: return self.handle
-            case 2: return self.combat_time
-            case 3: return self.DPS
-            case 4: return self.total_damage
-            case 5: return self.debuff
-            case 6: return self.attacks_in_share
-            case 7: return self.taken_damage_share
-            case 8: return self.damage_share
-            case 9: return self.max_one_hit
-            case 10: return self.crit_chance
-            case 11: return self.deaths
-            case 12: return self.total_heals
-            case 13: return self.heal_share
-            case 14: return self.heal_crit_chance
-            case 15: return self.total_damage_taken
-            case 16: return self.total_hull_damage_taken
-            case 17: return self.total_shield_damage_taken
-            case 18: return self.total_attacks
-            case 19: return self.hull_attacks
-            case 20: return self.attacks_in_num
-            case 21: return self.heal_crit_num
-            case 22: return self.heal_num
-            case 23: return self.crit_num
-            case 24: return self.misses
-            case _: raise StopIteration()
+        entries = {
+            0: self.name,
+            1: self.handle,
+            2: self.combat_time,
+            3: self.DPS,
+            4: self.total_damage,
+            5: self.debuff,
+            6: self.attacks_in_share,
+            7: self.taken_damage_share,
+            8: self.damage_share,
+            9: self.max_one_hit,
+            10: self.crit_chance,
+            11: self.deaths,
+            12: self.total_heals,
+            13: self.heal_share,
+            14: self.heal_crit_chance,
+            15: self.total_damage_taken,
+            16: self.total_hull_damage_taken,
+            17: self.total_shield_damage_taken,
+            18: self.total_attacks,
+            19: self.hull_attacks,
+            20: self.attacks_in_num,
+            21: self.heal_crit_num,
+            22: self.heal_num,
+            23: self.crit_num,
+            24: self.misses,
+        }
+
+        if position >= len(entries):
+            raise StopIteration()
+
+        return entries.get(position, 0)
 
 class AnalysisTableRow():
     """
@@ -185,24 +190,29 @@ class AnalysisTableRow():
     def __len__(self) -> int:
         return 15
     
-    def __getitem__(self, position: int) -> str | float | int:
-        match position:
-            case 0: return self.name
-            case 1: return self.handle
-            case 2: return self.total_damage
-            case 3: return self.max_one_hit
-            case 4: return self.kills
-            case 5: return self.total_attacks
-            case 6: return self.misses
-            case 7: return self.crit_num
-            case 8: return self.flank_num
-            case 9: return self.total_shield_damage
-            case 10: return self.total_hull_damage
-            case 11: return self.total_base_damage
-            case 12: return self.combat_time
-            case 13: return self.hull_attacks
-            case 14: return self.shield_attacks
-            case _: raise StopIteration()
+    def __getitem__(self, position: int):
+        entries = {
+            0: self.name,
+            1: self.handle,
+            2: self.total_damage,
+            3: self.max_one_hit,
+            4: self.kills,
+            5: self.total_attacks,
+            6: self.misses,
+            7: self.crit_num,
+            8: self.flank_num,
+            9: self.total_shield_damage,
+            10: self.total_hull_damage,
+            11: self.total_base_damage,
+            12: self.combat_time,
+            13: self.hull_attacks,
+            14: self.shield_attacks,
+        }
+
+        if position >= len(entries):
+            raise StopIteration()
+
+        return entries.get(position, 0)
 
 class TreeItem():
     """
@@ -211,7 +221,7 @@ class TreeItem():
 
     __slots__ = ('data', 'parent', '_children')
     
-    def __init__(self, data: Iterable | str, parent):
+    def __init__(self, data, parent):
         self.data = data
         self.parent = parent
         self._children = list()

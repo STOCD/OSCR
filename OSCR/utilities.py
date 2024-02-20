@@ -32,7 +32,7 @@ def datetime_to_display(date_time:datetime) -> str:
     return (f'{date_time.year}-{date_time.month:02d}-{date_time.day:02d} {date_time.hour:02d}:'
             f'{date_time.minute:02d}:{date_time.second:02d}')
 
-def logline_to_str(line:LogLine | str) -> str:
+def logline_to_str(line) -> str:
     '''
     Converts LogLine to str or returns str if argument is str.
     '''

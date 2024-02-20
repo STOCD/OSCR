@@ -10,7 +10,7 @@ from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b191'
+    version = '2024.02b201'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
@@ -38,7 +38,7 @@ class OSCR():
                 for c in self.combats)
     
     @property
-    def active_combat(self) -> Combat | None:
+    def active_combat(self):
         '''
         Combat currently active (selected).
         '''
@@ -67,7 +67,7 @@ class OSCR():
             return False
         return self.combatlog_tempfiles_pointer > 0
 
-    def identfy_map(self, entity_id:str) -> str | None:
+    def identfy_map(self, entity_id:str):
         '''
         Identify map by checking whether the entity supplied identifies a map. Returns map name and 
         difficulty or None.
@@ -80,7 +80,7 @@ class OSCR():
             return MAP_IDENTIFIERS_EXISTENCE[clean_entity_id]
         return None      
 
-    def identify_difficulty(self, entity_id: str, id_list: tuple) -> str | None:
+    def identify_difficulty(self, entity_id: str, id_list: tuple):
         '''
         Identify difficulty by checking whether the entity supplied identifies a map including difficulty.
         Returns map and difficulty or None.
@@ -93,8 +93,7 @@ class OSCR():
             return MAP_IDENTIFIERS_EXISTENCE[clean_entity_id][1]
         return None
 
-    def analyze_log_file(self, total_combats:int | None = None, extend:bool = False, 
-            log_path:str | None = None):
+    def analyze_log_file(self, total_combats=None, extend=False, log_path=None):
         '''
         Analyzes the combat at self.log_path and replaces self.combats with the newly parsed combats.
         
@@ -179,7 +178,7 @@ class OSCR():
         current_combat.date_time = last_log_time
         self.combats.append(current_combat)
 
-    def analyze_massive_log_file(self, total_combats:int | None = None):
+    def analyze_massive_log_file(self, total_combats=None):
         '''
         Analyzes the combat at self.log_path and replaces self.combats with the newly parsed combats.
         Used to analyze log files larger than around 500000 lines. Wraps around self.analyze_log_file.
