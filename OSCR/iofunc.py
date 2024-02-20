@@ -1,4 +1,5 @@
 import os
+import gzip
 from io import TextIOWrapper
 from re import sub as re_sub
 from datetime import timedelta
@@ -74,14 +75,32 @@ def format_timestamp(timestamp:str) -> str:
     '''
     return timestamp.replace(':', '-', 2).replace(':', '_', 1).split('.')[0]
 
+def is_gz_file(filepath):
+    with open(filepath, 'rb') as test_f:
+        return test_f.read(2) == b'\x1f\x8b'
+
+def get_lines(log_path:str) -> list:
+    '''
+    Returns a list of lines parsed from the log file.
+    This function is aware that the file being passed in could be gzipped.
+    '''
+    lines_list = list()
+
+    if is_gz_file(log_path):
+        with gzip.open(log_path, 'rt', encoding='utf-8') as file:
+            lines_list = file.readlines()
+    else:
+        with open(log_path, 'r', encoding='utf-8') as file:
+            lines_list = file.readlines()
+
+    return lines_list
+
 def get_combat_log_data(log_path:str):
     if not (os.path.exists(log_path) and os.path.isfile(log_path)):
         raise FileNotFoundError(f'Invalid Path: {log_path}')
     if os.path.getsize(log_path) > 125 * 1024 * 1024:
         raise FileExistsError(f'File at {log_path} is too large. Use get_massive_log_data(...) instead')
-    lines_list = list()
-    with open(log_path, 'r', encoding='utf-8') as file:
-        lines_list = file.readlines()
+    lines_list = get_lines(log_path)
     if len(lines_list) < 1 or not lines_list[0].strip():
         raise TypeError('File must contain at least one not-empty line')
     if not '::' in lines_list[0] or not ',' in lines_list[0]:
