@@ -154,7 +154,7 @@ def split_log_by_lines(log_path:str, target_path:str, approx_lines_per_file:int 
                     break
                 current_lines.append(line)            
         
-def read_lines(file:TextIOWrapper, num:int, input_list:list | None = None) -> tuple[list, bool]:
+def read_lines(file:TextIOWrapper, num:int, input_list=None) -> tuple[list, bool]:
     '''
     Read num lines from file and return them along with a boolean value indicating whether the end of the
     file was reached during the read process.
