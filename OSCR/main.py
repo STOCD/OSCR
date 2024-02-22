@@ -1,7 +1,7 @@
 from datetime import timedelta
 import os
 
-from .datamodels import Combat, LogLine
+from .datamodels import Combat, LogLine, TreeItem
 from .iofunc import MAP_IDENTIFIERS_EXISTENCE
 from .iofunc import get_combat_log_data, split_log_by_lines, reset_temp_folder
 from .utilities import to_datetime, datetime_to_display
@@ -10,7 +10,7 @@ from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b201'
+    version = '2024.02b220'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
@@ -212,7 +212,7 @@ class OSCR():
            self.analyze_log_file(log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer])
 
 
-    def shallow_combat_analysis(self, combat_num:int) -> tuple[list]:
+    def shallow_combat_analysis(self, combat_num:int) -> tuple[list, ...]:
         '''
         Analyzes combat from currently available combats in self.combat.
 
@@ -232,7 +232,15 @@ class OSCR():
                                  f'Number of isolated combats: {len(self.combats)} -- '
                                  'Use OSCR.analyze_log_files() with appropriate arguments first.')
         
-    def full_combat_analysis(self, combat_num: int):
-        combat = self.combats[combat_num]
-        out = analyze_combat(combat, self._settings)
-        return out._root
+    def full_combat_analysis(self, combat_num: int) -> tuple[TreeItem]:
+        '''
+        Analyzes combat 
+        '''
+        try:
+            combat = self.combats[combat_num]
+            dmg_out, dmg_in, heal_out, heal_in = analyze_combat(combat, self._settings)
+            return dmg_out._root, dmg_in._root, heal_out._root, heal_in._root
+        except IndexError:
+            raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
+                                 f'Number of isolated combats: {len(self.combats)} -- '
+                                 'Use OSCR.analyze_log_files() with appropriate arguments first.')

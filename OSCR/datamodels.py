@@ -131,9 +131,16 @@ class OverviewTableRow():
         if position >= len(entries):
             raise StopIteration()
 
-        return entries.get(position, 0)
+        return entries[position]
 
 class AnalysisTableRow():
+    """
+    Superclass for damage and heal table rows
+    """
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
+
+class DamageTableRow(AnalysisTableRow):
     """
     Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_damage, 
     max_one_hit, kills, total_attacks, misses, crit_num, flank_num, total_shield_damage, total_hull_damage,
@@ -148,7 +155,9 @@ class AnalysisTableRow():
     def __init__(self, name: str, handle: str, id: str):
         """
         Parameters:
-
+        - :param name: name of the entity
+        - :param handle: handle of the entity
+        - :param id: id of the entity
         """
         # commented attributes represent additional fields in the final result, but are not required here
         self.name: str = name if name else '*'
@@ -183,9 +192,6 @@ class AnalysisTableRow():
         self.damage_buffer: float = 0.0
         self.combat_start: datetime = None
         self.combat_end: datetime = None
-
-    def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
     
     def __len__(self) -> int:
         return 15
@@ -212,7 +218,67 @@ class AnalysisTableRow():
         if position >= len(entries):
             raise StopIteration()
 
-        return entries.get(position, 0)
+        return entries[position]
+    
+class HealTableRow(AnalysisTableRow):
+    """
+    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_heal, hull_heal, 
+    shield_heal, max_one_heal, heal_ticks, critical_heals, combat_time, hull_heal_ticks, shield_heal_ticks)
+    """
+    __slots__ = ('name', 'handle', 'total_heal', 'hull_heal', 'shield_heal', 'max_one_heal', 'heal_ticks',
+            'critical_heals', 'combat_time', 'hull_heal_ticks', 'shield_heal_ticks', 'id', 'combat_start', 
+            'combat_end')
+    
+    def __init__(self, name: str, handle: str, id: str):
+        """
+        Parameters:
+        - :param name: name of the entity
+        - :param handle: handle of the entity
+        - :param id: id of the entity
+        """
+        # commented attributes represent additional fields in the final result, but are not required here
+        self.name: str = name
+        self.handle: str = handle
+        # self.HPS: float = 0.0
+        self.total_heal: float = 0.0
+        self.hull_heal: float = 0.0
+        # self.hull_HPS: float = 0.0
+        self.shield_heal: float = 0.0
+        # self.shield_HPS: float = 0.0
+        self.max_one_heal: float = 0.0
+        # self.crit_chance: float = 0.0
+        self.heal_ticks: int = 0
+        self.critical_heals: int = 0
+        self.combat_time: float = 0.0
+        self.hull_heal_ticks: int = 0
+        self.shield_heal_ticks: int = 0
+
+        self.id: str = id
+        self.combat_start: datetime = None
+        self.combat_end: datetime = None
+
+    def __len__(self) -> int:
+        return 11
+    
+    def __getitem__(self, position: int):
+        entries = {
+            0: self.name,
+            1: self.handle,
+            2: self.total_heal,
+            3: self.hull_heal,
+            4: self.shield_heal,
+            5: self.max_one_heal,
+            6: self.heal_ticks,
+            7: self.critical_heals,
+            8: self.combat_time,
+            9: self.hull_heal_ticks,
+            10: self.shield_heal_ticks
+        }
+
+        if position >= len(entries):
+            raise StopIteration()
+
+        return entries[position]
 
 class TreeItem():
     """
@@ -274,16 +340,18 @@ class TreeModel():
         self.pet_group_index = dict()
         self.pet_index = dict()
         self.target_index = dict()
+        self.source_index = dict()
         self._root = TreeItem(header, None)
-        self._player = TreeItem(['Player'] + [''] * (len(TREE_HEADER) - 1), self._root)
-        self._npc = TreeItem(['NPC'] + [''] * (len(TREE_HEADER) - 1), self._root)
+        self._player = TreeItem(['Player'] + [''] * (len(header) - 1), self._root)
+        self._npc = TreeItem(['NPC'] + [''] * (len(header) - 1), self._root)
         self._root.append_child(self._player)
         self._root.append_child(self._npc)
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} with columns {self._root.data}>'
     
-    def add_actor(self, name: str, handle: str, id: str, player: bool = True) -> TreeItem:
+    def add_actor(self, name: str, handle: str, id: str, row_constructor: AnalysisTableRow,
+            player: bool = True) -> TreeItem:
         """
         Adds Player or NPC to model.
 
@@ -291,11 +359,12 @@ class TreeModel():
         - :param name: name of the player or NPC
         - :param handle: handle of the player or NPC (NPC handle is an id number)
         - :param id: unique id string of the entity for use in index
+        - :param row_constructor: a new object returned by this constructor will hold the row data
         - :param player: True when player is added, False when NPC is added
 
         :return: added actor
         """
-        row = AnalysisTableRow(name, handle, id)
+        row = row_constructor(name, handle, id)
         if player:
             actor = TreeItem(row, self._player)
             self._player.append_child(actor)
@@ -305,6 +374,7 @@ class TreeModel():
         self.actor_index[id] = actor
         self.ability_index[id] = dict()
         self.target_index[id] = dict()
+        self.source_index[id] = dict()
         return actor
 
     def add_ability(self, name: str, ability_id: str, actor: TreeItem, actor_id: str) -> TreeItem:
@@ -374,48 +444,42 @@ class TreeModel():
         ability.append_child(target)
         self.target_index[actor_id][ability_id][target_id] = target
         return data
+    
+    def add_source_actor(self, name: tuple[str], source_id: str, actor: TreeItem, actor_id: str) -> TreeItem:
+        """
+        Adds source actor to model. Source actor is inserted as child to the given actor. Used for incoming
+        damage / heal table.
 
-# Currently not used; I forgot why I put this here
-# class TableRow():
-#     '''
-#     Contains data of a single row. Can have child rows.
-#     '''
-#     __slots__ = ('_row_data', '_children')
+        Parameters:
+        - :param name: name of the source
+        - :param source_id: unique id string of the source for use in index
+        - :param actor: actor TreeItem that is the parent of the ability
 
-#     def __init__(self, data:Optional[list] = None, children:Optional[list] = None) -> None:
-#         self._row_data = list()
-#         self._children = list()
-#         if isinstance(data, list):
-#             self._row_data = data
-#         if isinstance(children, list):
-#             self._children = children
+        :return: added source
+        """
+        source = TreeItem(name, actor)
+        actor.append_child(source)
+        self.source_index[actor_id][source_id] = source
+        self.ability_index[actor_id][source_id] = dict()
+        return source
+    
+    def add_source_ability(self, data: AnalysisTableRow, ability_id: str, source: TreeItem, source_id: str,
+            actor_id: str) -> AnalysisTableRow:
+        """
+        Adds ability to model. Ability is inserted as child to the given source. Used for incoming damage / 
+        heal table
 
-#     def __repr__(self) -> str:
-#         return f'<{self.__class__.__name__} - {self._row_data} - {len(self._children)} child rows>'
-    
-#     def __len__(self) -> int:
-#         return len(self._row_data)
-    
-#     def __getitem__(self, index:int):
-#         try:
-#             return self._row_data[index]
-#         except IndexError:
-#             raise IndexError
-    
-#     def __setitem__(self, index:int, value) -> None:
-#         self._row_data[index] = value
-    
-#     @property
-#     def children(self):
-#         return self._children
-    
-#     @property
-#     def row_data(self):
-#         return self
-    
-#     @row_data.setter
-#     def row_data(self, full_row:list):
-#         self._row_data = full_row
+        Parameters:
+        - :param data: row of data for the target. First entry must be the name of the target
+        - :param ability_id: unique id string of the target for use in index
+        - :param ability: ability TreeItem that is the parent of the target
+
+        :return: added target
+        """
+        ability = TreeItem(data, source)
+        source.append_child(ability)
+        self.ability_index[actor_id][source_id][ability_id] = ability
+        return data
 
 class Combat():
     '''
