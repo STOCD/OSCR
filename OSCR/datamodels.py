@@ -237,7 +237,7 @@ class HealTableRow(AnalysisTableRow):
         - :param id: id of the entity
         """
         # commented attributes represent additional fields in the final result, but are not required here
-        self.name: str = name
+        self.name: str = name if name else '*'
         self.handle: str = handle
         # self.HPS: float = 0.0
         self.total_heal: float = 0.0
@@ -485,13 +485,14 @@ class Combat():
     '''
     Contains a single combat including raw log lines, map and combat information and shallow parse results.
     '''
-    __slots__ = ('log_data', '_map', '_difficulty', 'date_time', 'table', 'graph_data')
+    __slots__ = ('log_data', '_map', '_difficulty', 'date_time', 'duration', 'table', 'graph_data')
 
     def __init__(self, log_lines:Optional[list[LogLine]] = None) -> None:
         self.log_data = log_lines
         self._map = None
         self._difficulty = None
         self.date_time = None
+        self.duration = None
         self.table = None
         self.graph_data = None
 

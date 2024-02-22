@@ -14,6 +14,7 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
     dmg_in_model = TreeModel(TREE_HEADER)
     heal_out_model = TreeModel(HEAL_TREE_HEADER)
     heal_in_model = TreeModel(HEAL_TREE_HEADER)
+    actor_combat_durations = dict()
     last_graph_time = combat.log_data[0].timestamp
     graph_points = 1
     for line in combat.log_data:
@@ -25,6 +26,20 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
         is_heal = ((is_shield_line and line.magnitude < 0 and line.magnitude2 >= 0) 
                 or line.type == 'HitPoints')
         
+        # Combat Duration
+        try:
+            actor_combat_durations[line.owner_id][1] = line.timestamp
+        except KeyError:
+            actor_combat_durations[line.owner_id] = [line.timestamp, line.timestamp]
+        try:
+            actor_combat_durations[line.source_id][1] = line.timestamp
+        except KeyError:
+            actor_combat_durations[line.source_id] = [line.timestamp, line.timestamp]
+        try:
+            actor_combat_durations[line.target_id][1] = line.timestamp
+        except KeyError:
+            actor_combat_durations[line.target_id] = [line.timestamp, line.timestamp]
+
         # HEALS
         if is_heal:
             ability_target = get_outgoing_heal_target_row(heal_out_model, line, player_attacks)
@@ -101,11 +116,14 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             if magnitude > source_ability.max_one_hit:
                 source_ability.max_one_hit = magnitude
     
+    for actor_id, (start_time, end_time) in actor_combat_durations.items():
+        actor_combat_durations[actor_id] = round((end_time - start_time).total_seconds(), 1)
+
     merge_single_lines(dmg_out_model)
-    complete_damage_tree(dmg_out_model)
-    complete_damage_tree(dmg_in_model)
-    complete_heal_tree(heal_out_model)
-    complete_heal_tree(heal_in_model)
+    complete_damage_tree(dmg_out_model, actor_combat_durations)
+    complete_damage_tree(dmg_in_model, actor_combat_durations)
+    complete_heal_tree(heal_out_model, actor_combat_durations)
+    complete_heal_tree(heal_in_model, actor_combat_durations)
     return dmg_out_model, dmg_in_model, heal_out_model, heal_in_model
 
 def get_outgoing_target_row(tree_model: TreeModel, line: LogLine, player_attacks: bool) -> DamageTableRow:
@@ -218,13 +236,13 @@ def get_incoming_target_row(tree_model: TreeModel, line: LogLine, player_attacke
 
     :return: reference to newly created or existing data row
     '''
-    target_id = line.target_id
+    target_id = (line.target_id,)
     target_handle = get_handle_from_id(line.target_id)
     if target_id in tree_model.actor_index:
         target = tree_model.actor_index[target_id]
     else:
-        target = tree_model.add_actor(line.target_name if line.target_name else '*', 
-                target_handle, target_id, row_constructor, player_attacked)
+        target = tree_model.add_actor(line.target_name, target_handle, target_id, row_constructor, 
+                player_attacked)
         target.data.combat_start = line.timestamp
     target.data.combat_end = line.timestamp
 
@@ -473,26 +491,28 @@ def complete_heal_sub_tree(item: TreeItem, combat_time):
             complete_heal_sub_tree(child, combat_time)
     item.data = combine_children_heal_stats(item)
 
-def complete_damage_tree(tree_model: TreeModel):
+def complete_damage_tree(tree_model: TreeModel, combat_durations: dict):
     '''
     Merges the data from the bottom up to fill all lines.
 
     Parameters:
     - :param tree_model: tree model to be completed
+    - :param combat_durations: combat durations for all actors
     '''
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
-        current_combat_time = round((actor.data.combat_end - actor.data.combat_start).total_seconds(), 1)
+        current_combat_time = combat_durations[actor.data.id[0]]
         actor.data.combat_time = current_combat_time
         complete_damage_sub_tree(actor, current_combat_time)
 
-def complete_heal_tree(tree_model: TreeModel):
+def complete_heal_tree(tree_model: TreeModel, combat_durations: dict):
     '''
     Merges the data from the bottom up to fill all lines.
 
     Parameters:
     - :param tree_model: tree model to be completed
+    - :param combat_durations: combat durations for all actors
     '''
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
-        current_combat_time = round((actor.data.combat_end - actor.data.combat_start).total_seconds(), 1)
+        current_combat_time = combat_durations[actor.data.id[0]]
         actor.data.combat_time = current_combat_time
         complete_heal_sub_tree(actor, current_combat_time)

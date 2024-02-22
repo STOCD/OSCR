@@ -16,6 +16,7 @@ def analyze_shallow(combat:Combat, settings):
     combat.table = list()
     player_dict = dict()
     computer_dict = dict()
+    first_line_time = combat.log_data[0].timestamp
     for line in combat.log_data:
         # manage entites
         player_attacks = line.owner_id.startswith('P')
@@ -95,6 +96,9 @@ def analyze_shallow(combat:Combat, settings):
                 player.graph_time.append(graph_points * graph_resolution)
             graph_points += 1
             last_graph_time = line.timestamp
+    
+    last_line_time = combat.log_data[-1].timestamp
+    combat.duration = (last_line_time - first_line_time).total_seconds()
     
     for player in player_dict.values():
         player.combat_time = (player.combat_end - player.combat_start).total_seconds()
