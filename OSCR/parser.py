@@ -1,4 +1,5 @@
 from datetime import timedelta
+import numpy
 
 from .datamodels import Combat, TreeItem, TreeModel, AnalysisTableRow, DamageTableRow, HealTableRow, LogLine
 from . import TREE_HEADER, HEAL_TREE_HEADER
@@ -8,42 +9,48 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
     """
     Fully analyzes the given combat and returns the root TreeItem from the output model.
     """
-    graph_resolution = settings['graph_resolution']
-    graph_timedelta = timedelta(seconds=graph_resolution)
+    graph_timedelta = timedelta(seconds=1)
     dmg_out_model = TreeModel(TREE_HEADER)
     dmg_in_model = TreeModel(TREE_HEADER)
     heal_out_model = TreeModel(HEAL_TREE_HEADER)
     heal_in_model = TreeModel(HEAL_TREE_HEADER)
     actor_combat_durations = dict()
-    last_graph_time = combat.log_data[0].timestamp
-    graph_points = 1
+    combat_duration_delta = combat.log_data[-1].timestamp - combat.log_data[0].timestamp
+    combat_duration_sec = int(combat_duration_delta.total_seconds()) + 1 # round up to full second
+    combat_start = combat.log_data[0].timestamp
+    relative_combat_sec = 0
     for line in combat.log_data:
-        # manage entites
+        
+        timestamp = line.timestamp
         player_attacks = line.owner_id.startswith('P')
         player_attacked = line.target_id.startswith('P')
         is_shield_line = line.type == 'Shield'
         crit_flag, miss_flag, flank_flag, kill_flag, shield_break_flag = get_flags(line.flags)
         is_heal = ((is_shield_line and line.magnitude < 0 and line.magnitude2 >= 0) 
                 or line.type == 'HitPoints')
-        
+
+        relative_combat_sec = (timestamp - combat_start).seconds
+
         # Combat Duration
         try:
-            actor_combat_durations[line.owner_id][1] = line.timestamp
+            actor_combat_durations[line.owner_id][1] = timestamp
         except KeyError:
-            actor_combat_durations[line.owner_id] = [line.timestamp, line.timestamp]
+            actor_combat_durations[line.owner_id] = [timestamp, timestamp]
         try:
-            actor_combat_durations[line.source_id][1] = line.timestamp
+            actor_combat_durations[line.source_id][1] = timestamp
         except KeyError:
-            actor_combat_durations[line.source_id] = [line.timestamp, line.timestamp]
+            actor_combat_durations[line.source_id] = [timestamp, timestamp]
         try:
-            actor_combat_durations[line.target_id][1] = line.timestamp
+            actor_combat_durations[line.target_id][1] = timestamp
         except KeyError:
-            actor_combat_durations[line.target_id] = [line.timestamp, line.timestamp]
+            actor_combat_durations[line.target_id] = [timestamp, timestamp]
 
         # HEALS
         if is_heal:
-            ability_target = get_outgoing_heal_target_row(heal_out_model, line, player_attacks)
-            source_ability = get_incoming_target_row(heal_in_model, line, player_attacked, HealTableRow)
+            target_item, ability_target = get_outgoing_heal_target_row(heal_out_model, line, player_attacks,
+                    combat_duration_sec)
+            source_item, source_ability = get_incoming_target_row(heal_in_model, line, player_attacked, 
+                    HealTableRow, combat_duration_sec)
 
             if crit_flag:
                 ability_target.critical_heals += 1
@@ -70,10 +77,15 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             if magnitude > source_ability.max_one_heal:
                 source_ability.max_one_heal = magnitude
 
+            target_item.graph_data[relative_combat_sec] += magnitude
+            source_item.graph_data[relative_combat_sec] += magnitude
+
         # DAMAGE
         else:
-            ability_target = get_outgoing_target_row(dmg_out_model, line, player_attacks)
-            source_ability = get_incoming_target_row(dmg_in_model, line, player_attacked, DamageTableRow)
+            target_item, ability_target = get_outgoing_target_row(dmg_out_model, line, player_attacks,
+                    combat_duration_sec)
+            source_item, source_ability = get_incoming_target_row(dmg_in_model, line, player_attacked, 
+                    DamageTableRow, combat_duration_sec)
         
             # get table data
             if miss_flag:
@@ -115,6 +127,9 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
                 ability_target.max_one_hit = magnitude
             if magnitude > source_ability.max_one_hit:
                 source_ability.max_one_hit = magnitude
+
+            target_item.graph_data[relative_combat_sec] += magnitude
+            source_item.graph_data[relative_combat_sec] += magnitude
     
     for actor_id, (start_time, end_time) in actor_combat_durations.items():
         actor_combat_durations[actor_id] = round((end_time - start_time).total_seconds(), 1)
@@ -126,7 +141,8 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
     complete_heal_tree(heal_in_model, actor_combat_durations)
     return dmg_out_model, dmg_in_model, heal_out_model, heal_in_model
 
-def get_outgoing_target_row(tree_model: TreeModel, line: LogLine, player_attacks: bool) -> DamageTableRow:
+def get_outgoing_target_row(tree_model: TreeModel, line: LogLine, player_attacks: bool, parse_duration: int
+        ) -> tuple[TreeItem, DamageTableRow]:
     '''
     Adds the needed parents to the tree model and returns the newly created or already existing data row.
     Also updates combat time of the actor.
@@ -135,6 +151,7 @@ def get_outgoing_target_row(tree_model: TreeModel, line: LogLine, player_attacks
     - :param tree_model: model to work on
     - :param line: log line that contains the ability
     - :param player_attacks: True when player attacks, False otherwise
+    - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
     :return: reference to newly created or existing data row
     '''
@@ -170,15 +187,16 @@ def get_outgoing_target_row(tree_model: TreeModel, line: LogLine, player_attacks
 
     ability_target_id = line.target_id
     if ability_target_id in tree_model.target_index[attacker_id][ability_id]:
-        ability_target = tree_model.target_index[attacker_id][ability_id][ability_target_id].data
+        ability_target = tree_model.target_index[attacker_id][ability_id][ability_target_id]
     else:
         ability_target = tree_model.add_target(DamageTableRow(line.target_name, 
-                get_handle_from_id(ability_target_id), ability_target_id), ability_target_id, ability, 
-                ability_id, attacker_id)
+                get_handle_from_id(ability_target_id), ability_target_id), ability_target_id,
+                ability, ability_id, attacker_id, parse_duration)
         
-    return ability_target
+    return ability_target, ability_target.data
 
-def get_outgoing_heal_target_row(tree_model: TreeModel, line: LogLine, player_attacks: bool) -> HealTableRow:
+def get_outgoing_heal_target_row(tree_model: TreeModel, line: LogLine, player_attacks: bool,
+        parse_duration: int) -> tuple[TreeItem, HealTableRow]:
     '''
     Adds the needed parents to the tree model and returns the newly created or already existing data row.
     Also updates combat time of the actor.
@@ -187,8 +205,9 @@ def get_outgoing_heal_target_row(tree_model: TreeModel, line: LogLine, player_at
     - :param tree_model: model to work on
     - :param line: log line that contains the ability
     - :param player_attacks: True when player attacks, False otherwise
+    - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
-    :return: reference to newly created or existing data row
+    :return: reference to newly created or existing TreeItem and data row
     '''
     if line.source_name:
         attacker_name = line.source_name
@@ -214,16 +233,16 @@ def get_outgoing_heal_target_row(tree_model: TreeModel, line: LogLine, player_at
 
     ability_target_id = line.target_id
     if ability_target_id in tree_model.target_index[attacker_id][ability_id]:
-        ability_target = tree_model.target_index[attacker_id][ability_id][ability_target_id].data
+        ability_target = tree_model.target_index[attacker_id][ability_id][ability_target_id]
     else:
         ability_target = tree_model.add_target(HealTableRow(line.target_name, 
-                get_handle_from_id(ability_target_id), ability_target_id), ability_target_id, ability, 
-                ability_id, attacker_id)
+                get_handle_from_id(ability_target_id), ability_target_id), ability_target_id,
+                ability, ability_id, attacker_id, parse_duration)
         
-    return ability_target
+    return ability_target, ability_target.data
 
 def get_incoming_target_row(tree_model: TreeModel, line: LogLine, player_attacked: bool,
-        row_constructor: AnalysisTableRow) -> AnalysisTableRow:
+        row_constructor: AnalysisTableRow, parse_duration: int) -> tuple[TreeItem, AnalysisTableRow]:
     '''
     Adds the needed parents to the tree model and returns the newly created or already existing data row.
     Also updates combat time of the actor.
@@ -233,8 +252,9 @@ def get_incoming_target_row(tree_model: TreeModel, line: LogLine, player_attacke
     - :param line: log line that contains the ability
     - :param player_attacked: True when player is attacked, False otherwise
     - :param row_constructor: a new object returned by this constructor will hold the row data
+    - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
-    :return: reference to newly created or existing data row
+    :return: reference to newly created or existing TreItem and data row
     '''
     target_id = (line.target_id,)
     target_handle = get_handle_from_id(line.target_id)
@@ -261,12 +281,12 @@ def get_incoming_target_row(tree_model: TreeModel, line: LogLine, player_attacke
 
     source_ability_id = line.source_id + line.event_id
     if source_ability_id in tree_model.ability_index[target_id][source_id]:
-        source_ability = tree_model.ability_index[target_id][source_id][source_ability_id].data
+        source_ability = tree_model.ability_index[target_id][source_id][source_ability_id]
     else:
         source_ability = tree_model.add_source_ability(row_constructor(line.event_name, '', 
-                source_ability_id), source_ability_id, ability_source, source_id, target_id)
+                source_ability_id), source_ability_id, ability_source, source_id, target_id, parse_duration)
         
-    return source_ability
+    return source_ability, source_ability.data
 
 def get_flags(flag_str:str) -> tuple[bool]:
     '''
@@ -362,9 +382,6 @@ def combine_children_damage_stats(item: TreeItem) -> tuple:
 
     Parameters:
     - :param item: item to retrieve children data from; item.data must be string containing the ability name
-
-    :return: row data according to TREE_HEADER (see __init__.py), plus the name of the ability as 
-    first element -> (name, DPS, Total Damage, ...)
     '''
     for index, column in enumerate(zip(*item._children)):
         if index == 0:
@@ -381,7 +398,7 @@ def combine_children_damage_stats(item: TreeItem) -> tuple:
             combined_data.append(column[0])
         else:
             combined_data.append(sum(column))
-    return tuple(combined_data)
+    item.data = tuple(combined_data)
 
 def combine_children_heal_stats(item: TreeItem) -> tuple:
     '''
@@ -390,9 +407,6 @@ def combine_children_heal_stats(item: TreeItem) -> tuple:
 
     Parameters:
     - :param item: item to retrieve children data from; item.data must be string containing the ability name
-
-    :return: row data according to HEAL_TREE_HEADER (see __init__.py), plus the name of the ability as 
-    first element -> (name, HPS, Total Heal, ...)
     '''
     for index, column in enumerate(zip(*item._children)):
         if index == 0:
@@ -409,7 +423,7 @@ def combine_children_heal_stats(item: TreeItem) -> tuple:
             combined_data.append(column[0])
         else:
             combined_data.append(sum(column))
-    return tuple(combined_data)
+    item.data = tuple(combined_data)
 
 def merge_single_lines(tree_model: TreeModel):
     '''
@@ -470,12 +484,15 @@ def complete_damage_sub_tree(item: TreeItem, combat_time):
     Parameters:
     - :param item: item to complete
     '''
+    graph_data = list()
     for child in item._children:
         if child.child_count == 0:
             child.data = calculate_damage_row_stats(child.data, combat_time)
         else:
             complete_damage_sub_tree(child, combat_time)
-    item.data = combine_children_damage_stats(item)
+        graph_data.append(child.graph_data)
+    combine_children_damage_stats(item)
+    item.graph_data = numpy.sum(graph_data, axis=0, dtype=numpy.float64)
 
 def complete_heal_sub_tree(item: TreeItem, combat_time):
     '''
@@ -484,12 +501,15 @@ def complete_heal_sub_tree(item: TreeItem, combat_time):
     Parameters:
     - :param item: item to complete
     '''
+    graph_data = list()
     for child in item._children:
         if child.child_count == 0:
             child.data = calculate_heal_row_stats(child.data, combat_time)
         else:
             complete_heal_sub_tree(child, combat_time)
-    item.data = combine_children_heal_stats(item)
+        graph_data.append(child.graph_data)
+    combine_children_heal_stats(item)
+    item.graph_data = numpy.sum(graph_data, axis=0, dtype=numpy.float64)
 
 def complete_damage_tree(tree_model: TreeModel, combat_durations: dict):
     '''

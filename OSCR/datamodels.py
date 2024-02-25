@@ -1,6 +1,9 @@
 from typing import Optional, Iterable
 from datetime import datetime
 from collections import namedtuple
+
+import numpy
+
 from . import TREE_HEADER
 
 
@@ -149,8 +152,7 @@ class DamageTableRow(AnalysisTableRow):
     __slots__ = ('name', 'handle', 'total_damage', 'max_one_hit', 'kills', 
             'total_attacks', 'misses', 'crit_num', 'flank_num', 'total_shield_damage', 'total_hull_damage',
             'total_base_damage', 'combat_time', 'hull_attacks', 'shield_attacks',
-            'id', 'resistance_sum', 'DMG_graph_data', 'DPS_graph_data', 'graph_time', 'damage_buffer',
-            'combat_start', 'combat_end')
+            'id', 'resistance_sum', 'combat_start', 'combat_end')
     
     def __init__(self, name: str, handle: str, id: str):
         """
@@ -186,10 +188,6 @@ class DamageTableRow(AnalysisTableRow):
         
         self.id: str = id
         self.resistance_sum: float = 0.0
-        self.DMG_graph_data: list[float] = list()
-        self.DPS_graph_data: list[float] = list()
-        self.graph_time: list[float] = list()
-        self.damage_buffer: float = 0.0
         self.combat_start: datetime = None
         self.combat_end: datetime = None
     
@@ -285,10 +283,17 @@ class TreeItem():
     Item that contains data and children optionally.
     """
 
-    __slots__ = ('data', 'parent', '_children')
+    __slots__ = ('data', 'graph_data', 'parent', '_children')
     
-    def __init__(self, data, parent):
+    def __init__(self, data: Iterable, parent, parse_duration: int = 0):
+        """
+        Parameters:
+        - :param data: one-dimensional iterable containing the row data
+        - :param parent: TreeItem that is the parent of this item
+        - :param parse_duration: seconds between the first and last line of the combat, rounded up
+        """
         self.data = data
+        self.graph_data = numpy.zeros(parse_duration, numpy.float64)
         self.parent = parent
         self._children = list()
 
@@ -429,7 +434,7 @@ class TreeModel():
         return pet
 
     def add_target(self, data: AnalysisTableRow, target_id: str, ability: TreeItem, ability_id: str,
-            actor_id: str) -> AnalysisTableRow:
+            actor_id: str, parse_duration: int) -> TreeItem:
         """
         Adds target to model. target is inserted as child to the given ability.
 
@@ -437,13 +442,14 @@ class TreeModel():
         - :param data: row of data for the target. First entry must be the name of the target
         - :param target_id: unique id string of the target for use in index
         - :param ability: ability TreeItem that is the parent of the target
+        - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
         :return: added target
         """
-        target = TreeItem(data, ability)
+        target = TreeItem(data, ability, parse_duration)
         ability.append_child(target)
         self.target_index[actor_id][ability_id][target_id] = target
-        return data
+        return target
     
     def add_source_actor(self, name: tuple[str], source_id: str, actor: TreeItem, actor_id: str) -> TreeItem:
         """
@@ -464,7 +470,7 @@ class TreeModel():
         return source
     
     def add_source_ability(self, data: AnalysisTableRow, ability_id: str, source: TreeItem, source_id: str,
-            actor_id: str) -> AnalysisTableRow:
+            actor_id: str, parse_duration: int) -> TreeItem:
         """
         Adds ability to model. Ability is inserted as child to the given source. Used for incoming damage / 
         heal table
@@ -473,13 +479,14 @@ class TreeModel():
         - :param data: row of data for the target. First entry must be the name of the target
         - :param ability_id: unique id string of the target for use in index
         - :param ability: ability TreeItem that is the parent of the target
+        - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
         :return: added target
         """
-        ability = TreeItem(data, source)
+        ability = TreeItem(data, source, parse_duration)
         source.append_child(ability)
         self.ability_index[actor_id][source_id][ability_id] = ability
-        return data
+        return ability
 
 class Combat():
     '''

@@ -10,7 +10,7 @@ from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b250'
+    version = '2024.02b251'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
@@ -238,9 +238,9 @@ class OSCR():
         '''
         try:
             combat = self.combats[combat_num]
-            dmg_out, dmg_in, heal_out, heal_in = analyze_combat(combat, self._settings)
-            return dmg_out._root, dmg_in._root, heal_out._root, heal_in._root
         except IndexError:
             raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
                                  f'Number of isolated combats: {len(self.combats)} -- '
                                  'Use OSCR.analyze_log_files() with appropriate arguments first.')
+        dmg_out, dmg_in, heal_out, heal_in = analyze_combat(combat, self._settings)
+        return dmg_out._root, dmg_in._root, heal_out._root, heal_in._root
