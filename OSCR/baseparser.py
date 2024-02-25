@@ -192,8 +192,8 @@ def identify_difficulty(combat: Combat, computer_dict: dict) -> str:
 
     difficulty = "Unknown"
 
-    hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
-    if hull_identifiers:
+    hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, {})
+    if len(hull_identifiers):
         for _, entity in computer_dict.items():
             entity_map = hull_identifiers.get(entity.name, None)
             if entity_map:
@@ -202,5 +202,10 @@ def identify_difficulty(combat: Combat, computer_dict: dict) -> str:
                             entity.total_hull_damage_taken * 0.1:
                         difficulty = diff
                         break
+    else:
+        # A map has been detected but no difficulty mapping has been provided.
+        # This is applicable for maps with only 1 difficulty (e.g. Operation Wolf)
+        difficulty = "Normal"
+
 
     return difficulty

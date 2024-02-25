@@ -32,10 +32,11 @@ MAP_IDENTIFIERS_EXISTENCE = {
     "Space_Borg_Dreadnought_Hive_Intro": ("Hive Space", ''),
     "Mission_Space_Borg_Battleship_Queen_1_0f_2": ("Hive Space", ''),
     "Msn_Kcw_Rura_Penthe_System_Tfo_Dilithium_Hauler": ("Best Served Cold", ''),
-    "Ground_Federation_Capt_Mirror_Runabout_Tfo": ("Operation Wolf", ''),
+    "Ground_Federation_Capt_Mirror_Runabout_Tfo": ("Operation Wolf", 'Normal'),
     "Bluegills_Ground_Boss": ("Bug Hunt", ''),
     "Msn_Edren_Queue_Ground_Gorn_Lt_Tos_Range_Rock": ("Miner Instabilities", ''),
-    }
+    "Msn_Ground_Capt_Mirror_Janeway_Boss_Unkillable": ("Jupiter Station Showdown", ''),
+}
 
 # There's a possibility where there's so much overkill that the entity is
 # detected as an entity of the difficulty higher. This would be more likely to
@@ -61,12 +62,21 @@ MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
             "Elite": 449432,
         },
     },
-    # TODO: Capture Na'kuhl Captain Hull Value (There's only one)
+    # TODO: Capture Na'kuhl Captain Health Value (There's only one)
     "Miner Instabilities": {
         "Na'kuhl Captain": {
             "Elite": 20843,
         },
     },
+    # NOTE: Janeway is unkillable - this is approximately how much damage she takes.
+    # Actual Health: 83373
+    "Jupiter Station Showdown": {
+        "Marshal Janeway": {
+            "Elite": 63000,
+        },
+    },
+    "Operation Wolf": {
+    }
 }
 
 def format_timestamp(timestamp:str) -> str:
