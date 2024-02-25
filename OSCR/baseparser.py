@@ -192,7 +192,10 @@ def identify_difficulty(combat: Combat, computer_dict: dict) -> str:
 
     difficulty = "Unknown"
 
-    hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, {})
+    hull_identifiers = MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS.get(combat.map, None)
+    if hull_identifiers is None:
+        return difficulty
+
     if len(hull_identifiers):
         for _, entity in computer_dict.items():
             entity_map = hull_identifiers.get(entity.name, None)
