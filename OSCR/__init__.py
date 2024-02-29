@@ -17,3 +17,4 @@ HEAL_TREE_HEADER = ('', 'HPS', 'Total Heal', 'Hull Heal', 'Hull HPS', 'Shield He
 
 from .main import OSCR
 from .datamodels import TreeItem
+from .iofunc import split_log_by_lines, split_log_by_combat

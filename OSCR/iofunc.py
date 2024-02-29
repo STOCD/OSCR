@@ -1,4 +1,5 @@
 import os
+import shutil
 import gzip
 from io import TextIOWrapper
 from re import sub as re_sub
@@ -36,7 +37,7 @@ MAP_IDENTIFIERS_EXISTENCE = {
     "Bluegills_Ground_Boss": ("Bug Hunt", ''),
     "Msn_Edren_Queue_Ground_Gorn_Lt_Tos_Range_Rock": ("Miner Instabilities", ''),
     "Msn_Ground_Capt_Mirror_Janeway_Boss_Unkillable": ("Jupiter Station Showdown", ''),
-}
+    }
 
 # There's a possibility where there's so much overkill that the entity is
 # detected as an entity of the difficulty higher. This would be more likely to
@@ -181,7 +182,7 @@ def split_log_by_lines(log_path:str, target_path:str, approx_lines_per_file:int 
                     save_partial_log(absolute_target_path, original_filename, current_lines, filepaths)
                     current_lines = [line]
                     break
-                current_lines.append(line)            
+                current_lines.append(line)
         
 def read_lines(file:TextIOWrapper, num:int, input_list=None) -> tuple[list, bool]:
     '''
@@ -201,11 +202,67 @@ def read_lines(file:TextIOWrapper, num:int, input_list=None) -> tuple[list, bool
         lines.append(line)
     return (lines, end_of_file)
 
-def save_log(path:str, lines:list):
+def split_log_by_combat(log_path: str, target_path: str, first_num: str, last_num: str, 
+        combat_distance: int = 100, excluded_event_ids: list = []):
+    """
+    Splits off a number of combats from logfile and saves them to target path.
+
+    Parameters:
+    - :param log_path: path to existing logfile
+    - :param target_path: path to target file; will be overwritten if already existing!
+    - :param first_num: first combat to include in the new file
+    - :param last_num: last combat to include in the new file
+    - :param combat_distance: seconds between combats
+    - :param excluded_event_ids: combats starting with an event id from this list will be ignored
+    """
+    if not (os.path.exists(log_path) and os.path.isfile(log_path)):
+        raise FileNotFoundError(f'Invalid Log Path: {log_path}')
+    if last_num == -1:
+        to_end = True
+        last_num = 1
+    else:
+        to_end = False
+    combat_delta = timedelta(seconds=combat_distance)
+    current_combat = 1
+    current_combat_lines = list()
+    with open(log_path, 'r', encoding='utf-8') as source_file:
+        with open(target_path, 'w', encoding='utf-8') as target_file:
+            first_line = source_file.readline()
+            if not first_line:
+                return
+            last_log_time = to_datetime(first_line.split('::')[0])
+            current_combat_lines.append(first_line)
+            while True:
+                current_line = source_file.readline()
+                if not current_line:
+                    target_file.writelines(current_combat_lines)
+                    break
+                log_time = to_datetime(current_line.split('::')[0])
+                if log_time - last_log_time > combat_delta:
+                    if first_num <= current_combat and current_combat <= last_num:
+                        if not current_combat_lines[0].split(',')[7] in excluded_event_ids:
+                            target_file.writelines(current_combat_lines)
+                    if to_end:
+                            last_num += 1
+                    if current_combat >= last_num:
+                        return
+                    if not current_combat_lines[0].split(',')[7] in excluded_event_ids:
+                        current_combat += 1
+                    current_combat_lines = list()
+                current_combat_lines.append(current_line)
+                last_log_time = log_time
+
+
+def save_log(path:str, lines:list, overwrite: bool = False):
     '''
-    Saves lines to new file if file doesn't exist yet. Lines may be of type str or LogLine.
+    Saves lines to new file.
+
+    Parameters:
+    - :param path: path to log file
+    - :param lines: list of lines to write to file; individual lines may be  of type str or LogLine
+    - :param overwrite: overwrites existing file when set to True
     '''
-    if os.path.exists(path):
+    if os.path.exists(path) and not overwrite:
         raise FileExistsError(f'File "{path}" already exists.')
     with open(path, 'w', encoding='utf-8') as file:
         for line in map(logline_to_str, lines):
@@ -217,7 +274,7 @@ def reset_temp_folder(path:str):
     '''
     if os.path.exists(path):
         if os.path.isdir(path):
-            os.rmdir(path)
+            shutil.rmtree(path)
         else:
             raise FileExistsError(f'Expected path to folder, got "{path}"')
     os.mkdir(path)

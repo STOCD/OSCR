@@ -3,18 +3,18 @@ import os
 
 from .datamodels import Combat, LogLine, TreeItem
 from .iofunc import MAP_IDENTIFIERS_EXISTENCE
-from .iofunc import get_combat_log_data, split_log_by_lines, reset_temp_folder
+from .iofunc import get_combat_log_data, split_log_by_lines, reset_temp_folder, save_log
 from .utilities import to_datetime, datetime_to_display
 from .baseparser import analyze_shallow
 from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b251'
+    version = '2024.02b290'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
-        self.combats = list()
+        self.combats: list[Combat] = list()
         self.combats_pointer = None
         self.excess_log_lines = list()
         self.combatlog_tempfiles = list()
@@ -22,7 +22,7 @@ class OSCR():
         self._settings = {
             'combats_to_parse': 10,
             'seconds_between_combats': 100,
-            'excluding_event_ids': ['Autodesc.Combatevent.Falling'],
+            'excluded_event_ids': ['Autodesc.Combatevent.Falling'],
             'graph_resolution': 0.2,
             'templog_folder_path': f'{os.path.dirname(os.path.abspath(__file__))}\\~temp_log_files'
         }
@@ -136,12 +136,12 @@ class OSCR():
             if last_log_time - log_time > combat_delta:
                 if current_combat is not None:
                     if not (len(current_combat_lines) < 20 
-                            and current_combat_lines[0].event_id in self._settings['excluding_event_ids']):
+                            and current_combat_lines[0].event_id in self._settings['excluded_event_ids']):
                         current_combat_lines.reverse()
                         current_combat.log_data = current_combat_lines
                         current_combat.date_time = last_log_time
                         self.combats.append(current_combat)
-                    if len(self.combats) == self._settings['combats_to_parse']:
+                    if len(self.combats) >= total_combats:
                         self.excess_log_lines = log_lines[line_num:]
                         return
                 current_combat_lines = list()
@@ -196,20 +196,29 @@ class OSCR():
         self.analyze_log_file(total_combats, 
                 log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer])
         
-    def navigate_log(self, direction:str = 'down'):
+    def navigate_log(self, direction: str = 'down'):
         '''
         Analyzes earlier combats when direction is "down"; loads earlier templog file if current file is
         exhausted; loads later combatlog file if direction is "up".
+
+        Parameters:
+        - :param direction: "down" and "up"
+
+        :return: True when logfile was changed; False otherwise
         '''
         if direction == 'down' and self.navigation_down:
             if self.combatlog_tempfiles_pointer is None:
-                self.analyze_log_file(extend=True)
+                total_combat_num = len(self.combats) + self._settings['combats_to_parse']
+                self.analyze_log_file(total_combats=total_combat_num, extend=True)
+                return False
             else:
                 self.combatlog_tempfiles_pointer -= 1
                 self.analyze_log_file(log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer])
+                return True
         elif direction == 'up' and self.navigation_up:
            self.combatlog_tempfiles_pointer += 1
            self.analyze_log_file(log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer])
+           return True
 
 
     def shallow_combat_analysis(self, combat_num:int) -> tuple[list, ...]:
@@ -230,7 +239,7 @@ class OSCR():
         except IndexError:
             raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
                                  f'Number of isolated combats: {len(self.combats)} -- '
-                                 'Use OSCR.analyze_log_files() with appropriate arguments first.')
+                                 'Use OSCR.analyze_log_file() with appropriate arguments first.')
         
     def full_combat_analysis(self, combat_num: int) -> tuple[TreeItem]:
         '''
@@ -241,6 +250,23 @@ class OSCR():
         except IndexError:
             raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
                                  f'Number of isolated combats: {len(self.combats)} -- '
-                                 'Use OSCR.analyze_log_files() with appropriate arguments first.')
+                                 'Use OSCR.analyze_log_file() with appropriate arguments first.')
         dmg_out, dmg_in, heal_out, heal_in = analyze_combat(combat, self._settings)
         return dmg_out._root, dmg_in._root, heal_out._root, heal_in._root
+    
+    def export_combat(self, combat_num: int, path: str):
+        '''
+        Exports combat to new logfile
+
+        Parameters:
+        - :param combat_num: index of the combat in self.combats
+        - :param path: path to export the log to, will overwrite existing files
+        '''
+        try:
+            log_lines = self.combats[combat_num].log_data
+        except IndexError:
+            raise AttributeError(f'Combat #{combat_num} you are trying to save has not been isolated yet.'
+                                 f'Number of isolated combats: {len(self.combats)} -- '
+                                 'Use OSCR.analyze_log_file() with appropriate arguments first.')
+        save_log(path, log_lines, True)
+        
