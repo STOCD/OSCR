@@ -10,7 +10,7 @@ from .parser import analyze_combat
 
 class OSCR():
 
-    version = '2024.02b290'
+    version = '2024.03b10'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
@@ -24,6 +24,7 @@ class OSCR():
             'seconds_between_combats': 100,
             'excluded_event_ids': ['Autodesc.Combatevent.Falling'],
             'graph_resolution': 0.2,
+            'split_log_after': 480000,
             'templog_folder_path': f'{os.path.dirname(os.path.abspath(__file__))}\\~temp_log_files'
         }
         if settings is not None:
@@ -191,7 +192,8 @@ class OSCR():
             raise AttributeError('"self.log_path" must contain a path to a log file.')
         temp_folder_path = self._settings['templog_folder_path']
         reset_temp_folder(temp_folder_path)
-        self.combatlog_tempfiles = split_log_by_lines(self.log_path, temp_folder_path, approx_lines_per_file= 80000)
+        self.combatlog_tempfiles = split_log_by_lines(self.log_path, temp_folder_path, 
+                approx_lines_per_file=480000)
         self.combatlog_tempfiles_pointer = len(self.combatlog_tempfiles) - 1
         self.analyze_log_file(total_combats, 
                 log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer])
