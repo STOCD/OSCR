@@ -1,13 +1,58 @@
 """ This file implements the Combat class """
 
-import numpy
-
 from collections import deque
 from datetime import datetime, timedelta
 
+import numpy
+
 from .datamodels import OverviewTableRow
 from .detection import Detection
-from .utilities import get_flags, get_handle_from_id
+from .utilities import get_entity_name, get_flags, get_handle_from_id
+
+
+def check_difficulty_deaths(data, metadata):
+    """
+    Check deaths against combat metadata
+    data: difficulty-based dicitionary in MAP_DIFFICULTY_ENTITY_DEATH_COUNTS
+    metadata: Combat metadata from analyze_computers
+    returns True on match, otherwise False
+    """
+
+    for k, v in data.items():
+        meta = metadata.get(k)
+        if meta is None:
+            # Map is missing some NPC data - it's invalid.
+            return False
+        if v != meta["deaths"]:
+            # Map kill counts don't line up - it's invalid (possible missed kill shot)
+            return False
+    return True
+
+
+def check_difficulty_damage(data, metadata):
+    """
+    Check hull damage taken against combat metadata
+    data: difficulty-based dicitionary in MAP_DIFFICULTY_ENTITY_HULL_COUNTS
+    metadata: Combat metadata from analyze_computers
+    returns True on match, otherwise False
+    """
+
+    # I had issues detecting HSA. This really should be lower.
+    # Maybe make it per-map?
+    var = 0.20
+
+    for k, v in data.items():
+        meta = metadata.get(k)
+        if meta is None:
+            # Map is missing some NPC data - it's invalid.
+            return False
+        med = numpy.percentile(meta["total_hull_damage_taken"], 50)
+        low = v * (1 - var)
+        high = v * (1 + var)
+        if low > med or high < med:
+            # Map damage don't line up - it's invalid (possible over/underkill)
+            return False
+    return True
 
 
 class Combat:
@@ -23,6 +68,7 @@ class Combat:
         self.end_time = None
         self.players = {}
         self.computers = {}
+        self.computer_meta = {}
 
     def analyze_last_line(self):
         """Analyze the last line and try and detect the map and difficulty"""
@@ -51,10 +97,21 @@ class Combat:
         over again.
         """
 
-        graph_resolution = graph_resolution
-        graph_timedelta = timedelta(seconds=graph_resolution)
+        self.graph_resolution = graph_resolution
+        self.analyze_log_data()
+        self.analyze_players()
+        self.analyze_computers()
+
+    def analyze_log_data(self):
+        """ """
+
+        graph_timedelta = timedelta(seconds=self.graph_resolution)
         graph_points = 1
         last_graph_time = self.log_data[0].timestamp
+
+        self.players = {}
+        self.computers = {}
+        self.computer_meta = {}
 
         for line in self.log_data:
             # manage entites
@@ -137,9 +194,14 @@ class Combat:
             for player in self.players.values():
                 player.DMG_graph_data.append(player.damage_buffer)
                 player.damage_buffer = 0.0
-                player.graph_time.append(graph_points * graph_resolution)
+                player.graph_time.append(graph_points * self.graph_resolution)
             graph_points += 1
             last_graph_time = line.timestamp
+
+    def analyze_players(self):
+        """
+        Analyze players to determine time-based metrics such as DPS.
+        """
 
         for player in self.players.values():
             player.combat_time = (
@@ -167,6 +229,79 @@ class Combat:
             DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
             player.DPS_graph_data = tuple(DPS_data / player.graph_time)
 
+    def analyze_computers(self):
+        """
+        Analyze map entities Computers to determine:
+            - The map type
+            - The difficulty of the map
+
+        If new results are obtained, this overrides the values previously set
+        if detect_line() was called during the creation of the Combat object.
+
+        The algorithm starts broad and then narrows in if additional detections
+        are necessary. The order in which they are processed:
+            - Entity Counts
+            - Entity Hull Damage Taken
+
+        On maps such as Infected Space Entity Hull Damage Taken
+        (and later steps) do not need to be provided if Entity Counts is
+        sufficient in determinning map valididty.
+
+        Assumes that map and difficulty have already been set with detect_line.
+        """
+
+        _difficulty = self.difficulty
+
+        if self.map and self.difficulty:
+            return
+
+        if self.map == "Combat":
+            return
+
+        for entity_id, entity in self.computers.items():
+            entity_name = get_entity_name(entity_id)
+            self.add_entity_to_computer_meta(entity_name)
+            self.computer_meta[entity_name]["count"] += 1
+            self.computer_meta[entity_name]["deaths"] += entity.deaths
+            self.computer_meta[entity_name]["total_hull_damage_taken"].append(
+                entity.total_hull_damage_taken
+            )
+
+        data = Detection.MAP_DIFFICULTY_ENTITY_DEATH_COUNTS.get(self.map)
+        if data is None:
+            self.difficulty = _difficulty
+            return
+
+        for difficulty, entry in data.items():
+            if check_difficulty_deaths(entry, self.computer_meta):
+                _difficulty = difficulty
+                break
+
+        data = Detection.MAP_DIFFICULTY_ENTITY_HULL_COUNTS.get(self.map)
+        if data is None:
+            self.difficulty = _difficulty
+            return
+
+        matched = False
+        for difficulty, entry in data.items():
+            if check_difficulty_damage(entry, self.computer_meta):
+                matched = True
+                _difficulty = difficulty
+                break
+        if not matched:
+            return
+
+        self.difficulty = _difficulty
+
+    def add_entity_to_computer_meta(self, entity_name):
+        """Adds a new entry to the computer metadata"""
+        if self.computer_meta.get(entity_name) is None:
+            self.computer_meta[entity_name] = {
+                "count": 0,
+                "deaths": 0,
+                "total_hull_damage_taken": [],
+            }
+
     @property
     def duration(self):
         return (self.end_time - self.start_time).total_seconds()
@@ -180,10 +315,6 @@ class Combat:
     def player_dict(self):
         """Returns the list of players - for compatibility with previous versions"""
         return self.players
-
-    @property
-    def graph_data(self):
-        """Returns a tuple of graph data (times, DPS, damaga)"""
 
     def __repr__(self) -> str:
         return (

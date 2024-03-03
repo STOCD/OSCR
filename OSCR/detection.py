@@ -1,8 +1,7 @@
 """ Combat Detection Methods """
 
-import re
-
 from .datamodels import LogLine
+from .utilities import get_entity_name
 
 
 class Detection:
@@ -118,17 +117,109 @@ class Detection:
         },
     }
 
-    # There's a possibility where there's so much overkill that the entity is
-    # detected as an entity of the difficulty higher. This would be more likely to
-    # happen on ground maps.
-    MAP_DIFFICULTY_ENTITY_HULL_IDENTIFIERS = {
-        "Infected Space": {},
-        "Hive Space": {},
-        "Bug Hunt": {},
-        "Miner Instabilities": {},
-        "Jupiter Station Showdown": {},
-        "Operation Wolf": {},
-        "Nukara Prime: Transdimensional Tactics": {},
+    # Detect maps based on # of entities
+    MAP_DIFFICULTY_ENTITY_DEATH_COUNTS = {
+        "Infected Space": {
+            "Advanced": {
+                "Space_Borg_Battleship_Raidisode": 5,
+                "Space_Borg_Cruiser_Raidisode": 6,
+                "Mission_Borgraid1_Transwarp_02": 1,
+                "Space_Borg_Dreadnought_Raidisode_Sibrian_Final_Boss": 1,
+            },
+            "Elite": {
+                "Space_Borg_Battleship_Raidisode_Sibrian_Elite_Initial": 2,
+                "Space_Borg_Dreadnought_Raidisode_Sibrian_Initial_Boss": 1,
+                "Space_Borg_Cruiser_Raidisode_Sibrian_Elite_Initial": 4,
+                "Space_Borg_Battleship_Raidisode": 2,
+                "Mission_Borgraid1_Transwarp_02": 1,
+            },
+        },
+        "Hive Space": {
+            "Advanced": {
+                "Mission_Space_Borg_Queen_Diamond": 1,
+                "Mission_Space_Borg_Battleship_Queen_2_0f_2": 1,
+                "Mission_Space_Borg_Battleship_Queen_1_0f_2": 1,
+            },
+            "Elite": {
+                "Mission_Space_Borg_Queen_Diamond": 1,
+                "Mission_Space_Borg_Battleship_Queen_2_0f_2": 1,
+                "Mission_Space_Borg_Battleship_Queen_1_0f_2": 1,
+            },
+        },
+        "Bug Hunt": {
+            "Elite": {
+                "Msn_Dlt_Bluegill_Hunt_Queue_Ground_Ens": 3,
+                "Bluegills_Ground_Cdr": 26,
+                "Bluegills_Ground_Capt": 1,
+                "Bluegills_Ground_Boss": 1,
+            },
+        },
+        "Jupiter Station Showdown": {
+            "Elite": {
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Ens_Melee": 27,
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Lt_Range": 17,
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Cdr_Melee": 2,
+            }
+        },
+        "Miner Instabilities": {
+            "Elite": {
+                "Ground_Nakuhl_Capt_Range_Male": 1,
+            }
+        },
+        "Nukara Prime: Transdimensional Tactics": {
+            "Elite": {
+                "Mission_Event_Tholian_Invasion_Ext_Boss": 1,
+            },
+        },
+    }
+
+    # Detect maps based on # hull damage taken.
+    MAP_DIFFICULTY_ENTITY_HULL_COUNTS = {
+        "Hive Space": {
+            "Advanced": {
+                "Space_Borg_Cruiser_Hive_Intro1": 461582,
+                "Space_Borg_Cruiser_Hive_Intro2": 461582,
+                "Space_Borg_Battleship_Hive_Intro": 576977,
+                "Space_Borg_Dreadnought_Hive_Intro": 1707034,
+            },
+            "Elite": {
+                "Space_Borg_Cruiser_Hive_Intro1": 2165239,
+                "Space_Borg_Cruiser_Hive_Intro2": 2165239,
+                "Space_Borg_Battleship_Hive_Intro": 2706549,
+                "Space_Borg_Dreadnought_Hive_Intro": 8007542,
+            },
+        },
+        # "Bug Hunt": {
+        # "Elite": {
+        # "Bluegills_Ground_Cdr": 9444,
+        # "Bluegills_Ground_Ens": 3191,
+        # "Bluegills_Ground_Lt": 4986,
+        # }
+        # },
+        "Jupiter Station Showdown": {
+            "Elite": {
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Ens_Melee": 2605,
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Lt_Range": 3439,
+            }
+        },
+        "Miner Instabilities": {
+            "Elite": {
+                "Ground_Romulan_Tos_Ens_Range": 0,
+                "Ground_Romulan_Tos_Lt_Range": 0,
+                "Ground_Romulan_Tos_Cdr_Range": 0,
+                "Ground_Nakuhl_Lt_Range_Male": 0,
+                "Ground_Nakuhl_Lt_Range_Female": 0,
+                "Ground_Nakuhl_Cdr_Range_Male": 0,
+                "Ground_Nakuhl_Cdr_Range_Female": 0,
+                "Ground_Nakuhl_Ens_Melee": 0,
+                "Ground_Nakuhl_Ens_Range": 0,
+            }
+        },
+        "Nukara Prime: Transdimensional Tactics": {
+            "Elite": {
+                "Mission_Event_Tholian_Invasion_Ext_Boss_Portal": 0,
+            }
+        },
     }
 
     @staticmethod
@@ -143,11 +234,10 @@ class Detection:
         # Note: Doing a string split is slightly faster than using a regex.
         # re.search(r"C\[.* (?P<name>.*)]", line.target_id)
 
-        split = line.target_id.split(" ")
-        if len(split) != 2:
+        entity = get_entity_name(line.target_id)
+        if entity is None:
             return "Combat", None
 
-        entity = split[1].replace("]", "")
         entry = Detection.MAP_IDENTIFIERS_EXISTENCE.get(entity)
         if entry:
             return entry["map"], entry["difficulty"]

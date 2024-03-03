@@ -58,6 +58,17 @@ def get_handle_from_id(id_str:str) -> str:
     # the space is intentional to allow for fancy concatenation of name and handle
     return f' {handle.group("handle")}'
 
+
+def get_entity_name(entity_id: str) -> str:
+    """
+    Returns the entity name matching an entity id.
+    """
+    split = entity_id.split(" ")
+    if len(split) != 2:
+        return None
+    return split[1].replace("]", "")
+
+
 def get_flags(flag_str: str) -> tuple[bool]:
     """
     Returns flags from flag field of log line.
