@@ -1,4 +1,4 @@
-__all__ = ['baseparser', 'cli', 'datamodels', 'iofunc', 'main', 'parser', 'utilities']
+__all__ = ['cli', 'datamodels', 'iofunc', 'main', 'parser', 'utilities']
 
 TABLE_HEADER = ('Combat Time', 'DPS', 'Total Damage', 'Debuff', 'Attacks-in Share', 'Taken Damage Share', 
         'Damage Share', 'Max One Hit', 'Crit Chance', 'Deaths', 'Total Heals', 'Heal Share', 

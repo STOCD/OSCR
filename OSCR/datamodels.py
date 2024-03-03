@@ -4,9 +4,6 @@ from collections import namedtuple
 
 import numpy
 
-from . import TREE_HEADER
-
-
 LogLine = namedtuple('LogLine', 
         ('timestamp',
         'owner_name', 
@@ -487,59 +484,3 @@ class TreeModel():
         source.append_child(ability)
         self.ability_index[actor_id][source_id][ability_id] = ability
         return ability
-
-class Combat():
-    '''
-    Contains a single combat including raw log lines, map and combat information and shallow parse results.
-    '''
-    __slots__ = ('log_data', '_map', '_difficulty', 'date_time', 'duration', 'table', 'graph_data')
-
-    def __init__(self, log_lines:Optional[list[LogLine]] = None) -> None:
-        self.log_data = log_lines
-        self._map = None
-        self._difficulty = None
-        self.date_time = None
-        self.duration = None
-        self.table = None
-        self.graph_data = None
-
-    @property
-    def player_dict(self):
-        dictionary = dict()
-        for player_row in self.table:
-            dictionary[f'{player_row[0]}{player_row[1]}'] = PlayerOverviewRow(*player_row)
-        return dictionary
-
-    @property
-    def map(self) -> str:
-        if self._map is None:
-            return 'Combat'
-        return self._map
-    
-    @map.setter
-    def map(self, map_name):
-        self._map = map_name
-
-    @property
-    def difficulty(self) -> str:
-        if self._difficulty is None:
-            return ''
-        return self._difficulty
-    
-    @difficulty.setter
-    def difficulty(self, difficulty_name):
-        self._difficulty = difficulty_name
-
-    def __repr__(self) -> str:
-        return (f'<{self.__class__.__name__} - Map: {self.map} - Difficulty: {self.difficulty} - Datetime: '
-                f'{self.date_time}>')
-    
-    def __gt__(self, other):
-        if not isinstance(other, Combat):
-            raise TypeError(f'Cannot compare {self.__class__.__name__} to {other.__class__.__name__}')
-        if isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
-            return self.date_time > other.date_time
-        if not isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
-            return False
-        if isinstance(self.date_time, datetime) and not isinstance(other.date_time, datetime):
-            return True

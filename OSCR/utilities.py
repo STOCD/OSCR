@@ -58,6 +58,17 @@ def get_handle_from_id(id_str:str) -> str:
     # the space is intentional to allow for fancy concatenation of name and handle
     return f' {handle.group("handle")}'
 
+def get_flags(flag_str: str) -> tuple[bool]:
+    """
+    Returns flags from flag field of log line.
+
+    :return: (critical_hit, miss, kill)
+    """
+    critical_hit = "Critical" in flag_str
+    miss = "Miss" in flag_str
+    kill = "Kill" in flag_str
+    return (critical_hit, miss, kill)
+
 def reversed_index(length: int) -> Generator[int, None, None]:
     '''
     Generator that yields the indices for an iterable with given length in reversed order.

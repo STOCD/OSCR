@@ -1,12 +1,11 @@
 from datetime import timedelta
 import os
 
-from .datamodels import Combat, LogLine, TreeItem
-from .iofunc import MAP_IDENTIFIERS_EXISTENCE
+from .datamodels import LogLine, TreeItem
 from .iofunc import get_combat_log_data, split_log_by_lines, reset_temp_folder, save_log
 from .utilities import to_datetime, datetime_to_display
-from .baseparser import analyze_shallow
 from .parser import analyze_combat
+from .combat import Combat
 
 class OSCR():
 
@@ -31,12 +30,17 @@ class OSCR():
             self._settings.update(settings)
 
     @property
-    def analyzed_combats(self) -> tuple[str]:
+    def analyzed_combats(self) -> list[str]:
         '''
         Contains tuple with available combats.
         '''
-        return tuple(f'{c.map}{" " + c.difficulty} {datetime_to_display(c.date_time)}' 
-                for c in self.combats)
+        res = list()
+        for c in self.combats:
+            if c.difficulty:
+                res.append(f'{c.map} {c.difficulty} {datetime_to_display(c.start_time)}')
+            else:
+                res.append(f'{c.map} {datetime_to_display(c.start_time)}')
+        return res
     
     @property
     def active_combat(self):
@@ -68,32 +72,6 @@ class OSCR():
             return False
         return self.combatlog_tempfiles_pointer > 0
 
-    def identfy_map(self, entity_id:str):
-        '''
-        Identify map by checking whether the entity supplied identifies a map. Returns map name and 
-        difficulty or None.
-        '''
-        try:
-            clean_entity_id = entity_id.split(' ', maxsplit=1)[1].split(']', maxsplit=1)[0]
-        except IndexError:
-            return None
-        if clean_entity_id in MAP_IDENTIFIERS_EXISTENCE:
-            return MAP_IDENTIFIERS_EXISTENCE[clean_entity_id]
-        return None      
-
-    def identify_difficulty(self, entity_id: str, id_list: tuple):
-        '''
-        Identify difficulty by checking whether the entity supplied identifies a map including difficulty.
-        Returns map and difficulty or None.
-        '''
-        try:
-            clean_entity_id = entity_id.split(' ', maxsplit=1)[1].split(']', maxsplit=1)[0]
-        except IndexError:
-            return None
-        if clean_entity_id in id_list:
-            return MAP_IDENTIFIERS_EXISTENCE[clean_entity_id][1]
-        return None
-
     def analyze_log_file(self, total_combats=None, extend=False, log_path=None):
         '''
         Analyzes the combat at self.log_path and replaces self.combats with the newly parsed combats.
@@ -123,60 +101,36 @@ class OSCR():
             log_lines.reverse()
             self.combats = list()
             self.excess_log_lines = list()
+
         combat_delta = timedelta(seconds=self._settings['seconds_between_combats'])
-        current_combat_lines = list()
-        current_combat = None
-        map_identified = False
-        difficulty_identified = True
-        difficulty_identifiers = None
         last_log_time = to_datetime(log_lines[0].split('::')[0]) + 2 * combat_delta
+        current_combat = Combat()
 
         for line_num, line in enumerate(log_lines):
             time_data, attack_data = line.split('::')
             log_time = to_datetime(time_data)
             if last_log_time - log_time > combat_delta:
-                if current_combat is not None:
-                    if not (len(current_combat_lines) < 20 
-                            and current_combat_lines[0].event_id in self._settings['excluded_event_ids']):
-                        current_combat_lines.reverse()
-                        current_combat.log_data = current_combat_lines
-                        current_combat.date_time = last_log_time
-                        self.combats.append(current_combat)
-                    if len(self.combats) >= total_combats:
-                        self.excess_log_lines = log_lines[line_num:]
-                        return
-                current_combat_lines = list()
-                current_combat = Combat()
-                map_identified = False
+                if len(current_combat.log_data) >= 20:
+                    current_combat.start_time = last_log_time
+                    self.combats.append(current_combat)
+                    current_combat = Combat()
+                if len(self.combats) >= total_combats:
+                    self.excess_log_lines = log_lines[line_num:]
+                    return
             splitted_line = attack_data.split(',')
-            current_line = LogLine(log_time, 
+            current_line = LogLine(
+                    log_time,
                     *splitted_line[:10],
                     float(splitted_line[10]),
-                    float(splitted_line[11])
-                    )
-            if not map_identified:
-                current_map = self.identfy_map(current_line.target_id)
-                if current_map is not None:
-                    if current_map[1] is None:
-                        current_combat.map = current_map[0]
-                        difficulty_identified = False
-                        difficulty_identifiers = current_map[2] 
-                    else:
-                        current_combat.map = current_map[0]
-                        current_combat.difficulty = current_map[1]
-                    map_identified = True
-            if not difficulty_identified:
-                current_difficulty = self.identify_difficulty(current_line.target_id, difficulty_identifiers)
-                if current_difficulty is not None:
-                    current_combat.difficulty = current_difficulty
-                    difficulty_identified = True
-
+                    float(splitted_line[11]),
+            )
             last_log_time = log_time
-            current_combat_lines.append(current_line)
+            current_combat.log_data.appendleft(current_line)
+            current_combat.analyze_last_line()
+            if not current_combat.end_time:
+                current_combat.end_time = last_log_time
 
-        current_combat_lines.reverse()
-        current_combat.log_data = current_combat_lines
-        current_combat.date_time = last_log_time
+        current_combat.start_time = last_log_time
         self.combats.append(current_combat)
 
     def analyze_massive_log_file(self, total_combats=None):
@@ -234,10 +188,8 @@ class OSCR():
         '''
         try:
             combat = self.combats[combat_num]
-            if combat.table is None or combat.graph_data is None:
-                analyze_shallow(combat, self._settings)
+            combat.analyze_shallow(graph_resolution=self._settings['graph_resolution'])
             self.combats_pointer = combat_num
-            return (combat.table, combat.graph_data)
         except IndexError:
             raise AttributeError(f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
                                  f'Number of isolated combats: {len(self.combats)} -- '
