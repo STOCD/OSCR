@@ -189,9 +189,15 @@ class Detection:
                 "Space_Borg_Dreadnought_Hive_Intro": 8007542,
             },
         },
-        "Bug Hunt": {
+        "Jupiter Station Showdown": {
             "Elite": {
-                # All of these failed against BHE's 25k log except for Spawnmother
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Ens_Melee": 2605,
+                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Lt_Range": 3439,
+            }
+        },
+        "Bug Hunt": {
+            # It's very easy to overkill on ground.
+            "Elite": {
                 # "Bluegills_Ground_Cdr": 9444,
                 # "Bluegills_Ground_Ens": 3191,
                 # "Bluegills_Ground_Lt": 4986,
@@ -199,23 +205,19 @@ class Detection:
                 "Bluegills_Ground_Boss": 449432,
             }
         },
-        "Jupiter Station Showdown": {
-            "Elite": {
-                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Ens_Melee": 2605,
-                "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Lt_Range": 3439,
-            }
-        },
         "Miner Instabilities": {
+            # It's very easy to overkill on ground.
             "Elite": {
-                "Ground_Romulan_Tos_Ens_Range": 0,
-                "Ground_Romulan_Tos_Lt_Range": 0,
-                "Ground_Romulan_Tos_Cdr_Range": 0,
-                "Ground_Nakuhl_Lt_Range_Male": 0,
-                "Ground_Nakuhl_Lt_Range_Female": 0,
-                "Ground_Nakuhl_Cdr_Range_Male": 0,
-                "Ground_Nakuhl_Cdr_Range_Female": 0,
-                "Ground_Nakuhl_Ens_Melee": 0,
-                "Ground_Nakuhl_Ens_Range": 0,
+                "Ground_Romulan_Tos_Cdr_Range": 6513,
+                # "Ground_Romulan_Tos_Lt_Range": 3439,
+                # "Ground_Romulan_Tos_Ens_Range": 2605,
+                # "Ground_Nakuhl_Cdr_Range_Male": 6513,
+                # "Ground_Nakuhl_Cdr_Range_Female": 6513,
+                # "Ground_Nakuhl_Lt_Range_Male": 3439,
+                # "Ground_Nakuhl_Lt_Range_Female": 3439,
+                # "Ground_Nakuhl_Ens_Melee": 2605,
+                # "Ground_Nakuhl_Ens_Range": 2605,
+                "Ground_Nakuhl_Capt_Range_Male": 20843,
             }
         },
         "Nukara Prime: Transdimensional Tactics": {
