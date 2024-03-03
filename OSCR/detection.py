@@ -189,13 +189,16 @@ class Detection:
                 "Space_Borg_Dreadnought_Hive_Intro": 8007542,
             },
         },
-        # "Bug Hunt": {
-        # "Elite": {
-        # "Bluegills_Ground_Cdr": 9444,
-        # "Bluegills_Ground_Ens": 3191,
-        # "Bluegills_Ground_Lt": 4986,
-        # }
-        # },
+        "Bug Hunt": {
+            "Elite": {
+                # All of these failed against BHE's 25k log except for Spawnmother
+                # "Bluegills_Ground_Cdr": 9444,
+                # "Bluegills_Ground_Ens": 3191,
+                # "Bluegills_Ground_Lt": 4986,
+                # "Bluegills_Ground_Capt": 32567,
+                "Bluegills_Ground_Boss": 449432,
+            }
+        },
         "Jupiter Station Showdown": {
             "Elite": {
                 "Msn_Assimilated_Fed_Odyssey_Ground_Borg_Ens_Melee": 2605,
