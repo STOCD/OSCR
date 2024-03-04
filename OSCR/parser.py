@@ -1,15 +1,14 @@
-from datetime import timedelta
 import numpy
 
-from .datamodels import Combat, TreeItem, TreeModel, AnalysisTableRow, DamageTableRow, HealTableRow, LogLine
+from .datamodels import TreeItem, TreeModel, AnalysisTableRow, DamageTableRow, HealTableRow, LogLine
 from . import TREE_HEADER, HEAL_TREE_HEADER
 from .utilities import get_handle_from_id, bundle
+from .combat import Combat
 
 def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
     """
     Fully analyzes the given combat and returns the root TreeItem from the output model.
     """
-    graph_timedelta = timedelta(seconds=1)
     dmg_out_model = TreeModel(TREE_HEADER)
     dmg_in_model = TreeModel(TREE_HEADER)
     heal_out_model = TreeModel(HEAL_TREE_HEADER)

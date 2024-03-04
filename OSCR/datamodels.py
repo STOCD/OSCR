@@ -4,9 +4,6 @@ from collections import namedtuple
 
 import numpy
 
-from . import TREE_HEADER
-
-
 LogLine = namedtuple('LogLine', 
         ('timestamp',
         'owner_name', 
@@ -22,45 +19,11 @@ LogLine = namedtuple('LogLine',
         'magnitude', 
         'magnitude2'))
 
-PlayerOverviewRow = namedtuple('PlayerOverviewRow',
-        ('name', 
-        'handle', 
-        'combat_time', 
-        'DPS',
-        'total_damage', 
-        'debuff', 
-        'attacks_in_share', 
-        'taken_damage_share', 
-        'damage_share', 
-        'max_one_hit', 
-        'crit_chance', 
-        'deaths', 
-        'total_heals', 
-        'heal_share', 
-        'heal_crit_chance', 
-        'total_damage_taken', 
-        'total_hull_damage_taken',
-        'total_shield_damage_taken', 
-        'total_attacks', 
-        'hull_attacks', 
-        'attacks_in_num', 
-        'heal_crit_num', 
-        'heal_num', 
-        'crit_num', 
-        'misses'
-        ))
-
-class OverviewTableRow():
+class OverviewTableRow:
     '''
     Contains a single row of data
     '''
-    __slots__ = ('name', 'handle', 'combat_time', 'DPS', 'total_damage', 'debuff', 'attacks_in_share', 
-            'taken_damage_share', 'damage_share', 'max_one_hit', 'crit_chance', 'deaths', 
-            'total_heals', 'heal_share', 'heal_crit_chance', 'total_damage_taken', 'total_hull_damage_taken',
-            'total_shield_damage_taken', 'total_attacks', 'hull_attacks', 'attacks_in_num', 'heal_crit_num', 
-            'heal_num', 'crit_num', 'misses', 'resistance_sum', 'DMG_graph_data', 'DPS_graph_data', 
-            'graph_time', 'damage_buffer', 'combat_start', 'combat_end')
-    
+
     def __init__(self, name:str, handle:str):
         self.name: str = name
         self.handle: str = handle
@@ -93,8 +56,8 @@ class OverviewTableRow():
         self.DPS_graph_data: list[float] = list()
         self.graph_time: list[float] = list()
         self.damage_buffer: float = 0.0
-        self.combat_start: datetime = None
-        self.combat_end: datetime = None
+        self.combat_start: float = None
+        self.combat_end: float = None
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
@@ -136,6 +99,36 @@ class OverviewTableRow():
 
         return entries[position]
 
+    @property
+    def __dict__(self):
+        return {
+            "DPS": self.DPS,
+            "name": self.name,
+            "deaths": self.deaths,
+            "debuff": self.debuff,
+            "handle": self.handle,
+            "misses": self.misses,
+            "crit_num": self.crit_num,
+            "heal_num": self.heal_num,
+            "heal_share": self.heal_share,
+            "combat_time": self.combat_time,
+            "crit_chance": self.crit_chance,
+            "max_one_hit": self.max_one_hit,
+            "total_heals": self.total_heals,
+            "damage_share": self.damage_share,
+            "hull_attacks": self.hull_attacks,
+            "total_damage": self.total_damage,
+            "heal_crit_num": self.heal_crit_num,
+            "total_attacks": self.total_attacks,
+            "attacks_in_num": self.attacks_in_num,
+            "attacks_in_share": self.attacks_in_share,
+            "heal_crit_chance": self.heal_crit_chance,
+            "taken_damage_share": self.taken_damage_share,
+            "total_damage_taken": self.total_damage_taken,
+            "total_hull_damage_taken": self.total_hull_damage_taken,
+            "total_shield_damage_taken": self.total_shield_damage_taken,
+        }
+
 class AnalysisTableRow():
     """
     Superclass for damage and heal table rows
@@ -149,11 +142,6 @@ class DamageTableRow(AnalysisTableRow):
     max_one_hit, kills, total_attacks, misses, crit_num, flank_num, total_shield_damage, total_hull_damage,
     total_base_damage, combat_time, hull_attacks, shield_attacks)
     """
-    __slots__ = ('name', 'handle', 'total_damage', 'max_one_hit', 'kills', 
-            'total_attacks', 'misses', 'crit_num', 'flank_num', 'total_shield_damage', 'total_hull_damage',
-            'total_base_damage', 'combat_time', 'hull_attacks', 'shield_attacks',
-            'id', 'resistance_sum', 'combat_start', 'combat_end')
-    
     def __init__(self, name: str, handle: str, id: str):
         """
         Parameters:
@@ -188,8 +176,8 @@ class DamageTableRow(AnalysisTableRow):
         
         self.id: str = id
         self.resistance_sum: float = 0.0
-        self.combat_start: datetime = None
-        self.combat_end: datetime = None
+        self.combat_start: float = None
+        self.combat_end: float = None
     
     def __len__(self) -> int:
         return 15
@@ -223,10 +211,7 @@ class HealTableRow(AnalysisTableRow):
     Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_heal, hull_heal, 
     shield_heal, max_one_heal, heal_ticks, critical_heals, combat_time, hull_heal_ticks, shield_heal_ticks)
     """
-    __slots__ = ('name', 'handle', 'total_heal', 'hull_heal', 'shield_heal', 'max_one_heal', 'heal_ticks',
-            'critical_heals', 'combat_time', 'hull_heal_ticks', 'shield_heal_ticks', 'id', 'combat_start', 
-            'combat_end')
-    
+
     def __init__(self, name: str, handle: str, id: str):
         """
         Parameters:
@@ -252,8 +237,8 @@ class HealTableRow(AnalysisTableRow):
         self.shield_heal_ticks: int = 0
 
         self.id: str = id
-        self.combat_start: datetime = None
-        self.combat_end: datetime = None
+        self.combat_start: float = None
+        self.combat_end: flaot = None
 
     def __len__(self) -> int:
         return 11
@@ -283,8 +268,6 @@ class TreeItem():
     Item that contains data and children optionally.
     """
 
-    __slots__ = ('data', 'graph_data', 'parent', '_children')
-    
     def __init__(self, data: Iterable, parent, parse_duration: int = 0):
         """
         Parameters:
@@ -487,59 +470,3 @@ class TreeModel():
         source.append_child(ability)
         self.ability_index[actor_id][source_id][ability_id] = ability
         return ability
-
-class Combat():
-    '''
-    Contains a single combat including raw log lines, map and combat information and shallow parse results.
-    '''
-    __slots__ = ('log_data', '_map', '_difficulty', 'date_time', 'duration', 'table', 'graph_data')
-
-    def __init__(self, log_lines:Optional[list[LogLine]] = None) -> None:
-        self.log_data = log_lines
-        self._map = None
-        self._difficulty = None
-        self.date_time = None
-        self.duration = None
-        self.table = None
-        self.graph_data = None
-
-    @property
-    def player_dict(self):
-        dictionary = dict()
-        for player_row in self.table:
-            dictionary[f'{player_row[0]}{player_row[1]}'] = PlayerOverviewRow(*player_row)
-        return dictionary
-
-    @property
-    def map(self) -> str:
-        if self._map is None:
-            return 'Combat'
-        return self._map
-    
-    @map.setter
-    def map(self, map_name):
-        self._map = map_name
-
-    @property
-    def difficulty(self) -> str:
-        if self._difficulty is None:
-            return ''
-        return self._difficulty
-    
-    @difficulty.setter
-    def difficulty(self, difficulty_name):
-        self._difficulty = difficulty_name
-
-    def __repr__(self) -> str:
-        return (f'<{self.__class__.__name__} - Map: {self.map} - Difficulty: {self.difficulty} - Datetime: '
-                f'{self.date_time}>')
-    
-    def __gt__(self, other):
-        if not isinstance(other, Combat):
-            raise TypeError(f'Cannot compare {self.__class__.__name__} to {other.__class__.__name__}')
-        if isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
-            return self.date_time > other.date_time
-        if not isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
-            return False
-        if isinstance(self.date_time, datetime) and not isinstance(other.date_time, datetime):
-            return True
