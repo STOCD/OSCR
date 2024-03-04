@@ -19,34 +19,6 @@ LogLine = namedtuple('LogLine',
         'magnitude', 
         'magnitude2'))
 
-PlayerOverviewRow = namedtuple('PlayerOverviewRow',
-        ('name', 
-        'handle', 
-        'combat_time', 
-        'DPS',
-        'total_damage', 
-        'debuff', 
-        'attacks_in_share', 
-        'taken_damage_share', 
-        'damage_share', 
-        'max_one_hit', 
-        'crit_chance', 
-        'deaths', 
-        'total_heals', 
-        'heal_share', 
-        'heal_crit_chance', 
-        'total_damage_taken', 
-        'total_hull_damage_taken',
-        'total_shield_damage_taken', 
-        'total_attacks', 
-        'hull_attacks', 
-        'attacks_in_num', 
-        'heal_crit_num', 
-        'heal_num', 
-        'crit_num', 
-        'misses'
-        ))
-
 class OverviewTableRow():
     '''
     Contains a single row of data
