@@ -171,6 +171,11 @@ class Detection:
                 "Mission_Event_Tholian_Invasion_Ext_Boss": 1,
             },
         },
+        "Battle of Wolf 359": {
+            "Elite": {
+                "Space_Borg_Cruiser_Wolf359": 3,
+            }
+        },
     }
 
     # Detect maps based on # hull damage taken.
@@ -223,6 +228,16 @@ class Detection:
         "Nukara Prime: Transdimensional Tactics": {
             "Elite": {
                 "Mission_Event_Tholian_Invasion_Ext_Boss_Portal": 0,
+            }
+        },
+        "Battle of Wolf 359": {
+            "Elite": {
+                "Space_Borg_Turret_Medium_Plasma_Torpedo_Wolf359": 0,
+                "Space_Borg_Turret_Medium_Plasma_Beam_Wolf359": 0,
+                "Space_Borg_Turret_Medium_Tractor_Beam_Wolf359": 0,
+                "Space_Borg_Wolf359_Escape_Pod_Tractor_Beam": 0,
+                "Space_Borg_Frigate_Wolf359": 0,
+                "Space_Borg_Cruiser_Wolf359": 0,
             }
         },
     }
