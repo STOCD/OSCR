@@ -197,14 +197,14 @@ class Combat:
                         attacker.resistance_sum += line.magnitude / line.magnitude2
                         attacker.hull_attacks += 1
 
-        # update graph
-        if line.timestamp - last_graph_time >= graph_timedelta:
-            for player in self.players.values():
-                player.DMG_graph_data.append(player.damage_buffer)
-                player.damage_buffer = 0.0
-                player.graph_time.append(graph_points * self.graph_resolution)
-            graph_points += 1
-            last_graph_time = line.timestamp
+            # update graph
+            if line.timestamp - last_graph_time >= graph_timedelta:
+                for player in self.players.values():
+                    player.DMG_graph_data.append(player.damage_buffer)
+                    player.damage_buffer = 0.0
+                    player.graph_time.append(graph_points * self.graph_resolution)
+                graph_points += 1
+                last_graph_time = line.timestamp
 
     def analyze_players(self):
         """
