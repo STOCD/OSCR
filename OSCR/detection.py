@@ -235,7 +235,7 @@ class Detection:
                 "Space_Borg_Turret_Medium_Plasma_Torpedo_Wolf359": 2081960,
                 "Space_Borg_Turret_Medium_Plasma_Beam_Wolf359": 2081960,
                 "Space_Borg_Turret_Medium_Tractor_Beam_Wolf359": 2081960,
-                "Space_Borg_Wolf359_Escape_Pod_Tractor_Beam": 0,
+                "Space_Borg_Wolf359_Escape_Pod_Tractor_Beam": 2081960,  # Assumption
                 "Space_Borg_Frigate_Wolf359": 2081960,
                 "Space_Borg_Cruiser_Wolf359": 0,
             }
