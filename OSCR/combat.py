@@ -1,7 +1,7 @@
 """ This file implements the Combat class """
 
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import numpy
 
@@ -127,34 +127,42 @@ class Combat:
                     self.players[line.owner_id] = OverviewTableRow(
                         line.owner_name, get_handle_from_id(line.owner_id)
                     )
-                    self.players[line.owner_id].combat_start = line.timestamp
+                    self.players[
+                        line.owner_id
+                    ].combat_start = line.timestamp.timestamp()
                 attacker = self.players[line.owner_id]
-                attacker.combat_end = line.timestamp
+                attacker.combat_end = line.timestamp.timestamp()
             else:
                 if line.owner_id not in self.computers:
                     self.computers[line.owner_id] = OverviewTableRow(
                         line.owner_name, get_handle_from_id(line.owner_id)
                     )
-                    self.computers[line.owner_id].combat_start = line.timestamp
+                    self.computers[
+                        line.owner_id
+                    ].combat_start = line.timestamp.timestamp()
                 attacker = self.computers[line.owner_id]
-                attacker.combat_end = line.timestamp
+                attacker.combat_end = line.timestamp.timestamp()
 
             if player_attacked:
                 if line.target_id not in self.players:
                     self.players[line.target_id] = OverviewTableRow(
                         line.target_name, get_handle_from_id(line.target_id)
                     )
-                    self.players[line.target_id].combat_start = line.timestamp
+                    self.players[
+                        line.target_id
+                    ].combat_start = line.timestamp.timestamp()
                 target = self.players[line.target_id]
-                target.combat_end = line.timestamp
+                target.combat_end = line.timestamp.timestamp()
             else:
                 if line.target_id not in self.computers:
                     self.computers[line.target_id] = OverviewTableRow(
                         line.target_name, get_handle_from_id(line.target_id)
                     )
-                    self.computers[line.target_id].combat_start = line.timestamp
+                    self.computers[
+                        line.target_id
+                    ].combat_start = line.timestamp.timestamp()
                 target = self.computers[line.target_id]
-                target.combat_end = line.timestamp
+                target.combat_end = line.timestamp.timestamp()
 
             # get table data
             if miss_flag:
@@ -204,9 +212,7 @@ class Combat:
         """
 
         for player in self.players.values():
-            player.combat_time = (
-                player.combat_end - player.combat_start
-            ).total_seconds()
+            player.combat_time = player.combat_end - player.combat_start
             successful_attacks = player.hull_attacks - player.misses
             try:
                 player.debuff = player.resistance_sum / successful_attacks * 100
@@ -304,7 +310,7 @@ class Combat:
 
     @property
     def duration(self):
-        return (self.end_time - self.start_time).total_seconds()
+        return self.end_time - self.start_time
 
     @property
     def date_time(self):
