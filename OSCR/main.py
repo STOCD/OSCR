@@ -9,7 +9,7 @@ from .combat import Combat
 
 class OSCR():
 
-    version = '2024.03b10'
+    version = '2024.03b040'
 
     def __init__(self, log_path:str = None, settings:dict = None):
         self.log_path = log_path
