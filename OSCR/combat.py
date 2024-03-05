@@ -73,11 +73,7 @@ class Combat:
     def analyze_last_line(self):
         """Analyze the last line and try and detect the map and difficulty"""
 
-        if (
-            self.map is not None
-            and self.map != "Combat"
-            and self.difficulty is not None
-        ):
+        if self.map is not None and self.map != "Combat" and self.difficulty is not None:
             return
 
         _map, _difficulty = Detection.detect_line(self.log_data[0])
@@ -127,9 +123,7 @@ class Combat:
                     self.players[line.owner_id] = OverviewTableRow(
                         line.owner_name, get_handle_from_id(line.owner_id)
                     )
-                    self.players[
-                        line.owner_id
-                    ].combat_start = line.timestamp.timestamp()
+                    self.players[line.owner_id].combat_start = line.timestamp.timestamp()
                 attacker = self.players[line.owner_id]
                 attacker.combat_end = line.timestamp.timestamp()
             else:
@@ -137,9 +131,7 @@ class Combat:
                     self.computers[line.owner_id] = OverviewTableRow(
                         line.owner_name, get_handle_from_id(line.owner_id)
                     )
-                    self.computers[
-                        line.owner_id
-                    ].combat_start = line.timestamp.timestamp()
+                    self.computers[line.owner_id].combat_start = line.timestamp.timestamp()
                 attacker = self.computers[line.owner_id]
                 attacker.combat_end = line.timestamp.timestamp()
 
@@ -148,9 +140,7 @@ class Combat:
                     self.players[line.target_id] = OverviewTableRow(
                         line.target_name, get_handle_from_id(line.target_id)
                     )
-                    self.players[
-                        line.target_id
-                    ].combat_start = line.timestamp.timestamp()
+                    self.players[line.target_id].combat_start = line.timestamp.timestamp()
                 target = self.players[line.target_id]
                 target.combat_end = line.timestamp.timestamp()
             else:
@@ -158,9 +148,7 @@ class Combat:
                     self.computers[line.target_id] = OverviewTableRow(
                         line.target_name, get_handle_from_id(line.target_id)
                     )
-                    self.computers[
-                        line.target_id
-                    ].combat_start = line.timestamp.timestamp()
+                    self.computers[line.target_id].combat_start = line.timestamp.timestamp()
                 target = self.computers[line.target_id]
                 target.combat_end = line.timestamp.timestamp()
 
@@ -211,9 +199,21 @@ class Combat:
         Analyze players to determine time-based metrics such as DPS.
         """
 
+        total_damage = 0
+        total_damage_taken = 0
+        total_attacks = 0
+        total_heals = 0
+
+        for player in self.players.values():
+            total_damage += player.total_damage
+            total_damage_taken += player.total_damage_taken
+            total_attacks += player.attacks_in_num
+            total_heals += player.total_heals
+
         for player in self.players.values():
             player.combat_time = player.combat_end - player.combat_start
             successful_attacks = player.hull_attacks - player.misses
+
             try:
                 player.debuff = player.resistance_sum / successful_attacks * 100
             except ZeroDivisionError:
@@ -230,6 +230,23 @@ class Combat:
                 player.heal_crit_chance = player.heal_crit_num / player.heal_num * 100
             except ZeroDivisionError:
                 player.heal_crit_chance = 0.0
+
+            try:
+                player.damage_share = player.total_damage / total_damage * 100
+            except ZeroDivisionError:
+                player.damage_share = 0.0
+            try:
+                player.taken_damage_share = player.total_damage_taken / total_damage_taken * 100
+            except ZeroDivisionError:
+                player.taken_damage_share = 0.0
+            try:
+                player.attacks_in_share = player.attacks_in_num / total_attacks * 100
+            except ZeroDivisionError:
+                player.attacks_in_share = 0.0
+            try:
+                player.heal_share = player.total_heals / total_heals * 100
+            except ZeroDivisionError:
+                player.heal_share = 0.0
 
             player.graph_time = tuple(map(lambda x: round(x, 1), player.graph_time))
             DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
@@ -269,9 +286,7 @@ class Combat:
             self.add_entity_to_computer_meta(entity_name)
             self.computer_meta[entity_name]["count"] += 1
             self.computer_meta[entity_name]["deaths"] += entity.deaths
-            self.computer_meta[entity_name]["total_hull_damage_taken"].append(
-                entity.total_hull_damage_taken
-            )
+            self.computer_meta[entity_name]["total_hull_damage_taken"].append(entity.total_hull_damage_taken)
 
         data = Detection.MAP_DIFFICULTY_ENTITY_DEATH_COUNTS.get(self.map)
         if data is None:
@@ -330,18 +345,10 @@ class Combat:
 
     def __gt__(self, other):
         if not isinstance(other, Combat):
-            raise TypeError(
-                f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}"
-            )
-        if isinstance(self.date_time, datetime) and isinstance(
-            self.date_time, datetime
-        ):
+            raise TypeError(f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
+        if isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
             return self.date_time > other.date_time
-        if not isinstance(self.date_time, datetime) and isinstance(
-            self.date_time, datetime
-        ):
+        if not isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
             return False
-        if isinstance(self.date_time, datetime) and not isinstance(
-            other.date_time, datetime
-        ):
+        if isinstance(self.date_time, datetime) and not isinstance(other.date_time, datetime):
             return True
