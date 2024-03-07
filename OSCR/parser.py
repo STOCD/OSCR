@@ -32,24 +32,10 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
 
         relative_combat_sec = (timestamp - combat_start).seconds
 
-        # Combat Duration
-        try:
-            actor_combat_durations[line.owner_id][1] = timestamp
-        except KeyError:
-            actor_combat_durations[line.owner_id] = [timestamp, timestamp]
-        try:
-            actor_combat_durations[line.source_id][1] = timestamp
-        except KeyError:
-            actor_combat_durations[line.source_id] = [timestamp, timestamp]
-        try:
-            actor_combat_durations[line.target_id][1] = timestamp
-        except KeyError:
-            actor_combat_durations[line.target_id] = [timestamp, timestamp]
-
         # HEALS
         if is_heal:
-            target_item, ability_target = get_outgoing_heal_target_row(
-                    heal_out_model, line, player_attacks, combat_duration_sec)
+            target_item, ability_target = get_outgoing_target_row(
+                    heal_out_model, line, player_attacks, HealTableRow, combat_duration_sec)
             source_item, source_ability = get_incoming_target_row(
                     heal_in_model, line, player_attacked, HealTableRow, combat_duration_sec)
 
@@ -84,9 +70,25 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
         # DAMAGE
         else:
             target_item, ability_target = get_outgoing_target_row(
-                    dmg_out_model, line, player_attacks, combat_duration_sec)
+                    dmg_out_model, line, player_attacks, DamageTableRow, combat_duration_sec)
             source_item, source_ability = get_incoming_target_row(
                     dmg_in_model, line, player_attacked, DamageTableRow, combat_duration_sec)
+
+            # Combat Duration
+            # Heals and self-damage don't affect combat time
+            if ability_target.name != '*':
+                try:
+                    actor_combat_durations[line.owner_id][1] = timestamp
+                except KeyError:
+                    actor_combat_durations[line.owner_id] = [timestamp, timestamp]
+                try:
+                    actor_combat_durations[line.source_id][1] = timestamp
+                except KeyError:
+                    actor_combat_durations[line.source_id] = [timestamp, timestamp]
+                try:
+                    actor_combat_durations[line.target_id][1] = timestamp
+                except KeyError:
+                    actor_combat_durations[line.target_id] = [timestamp, timestamp]
 
             # get table data
             if miss_flag:
@@ -144,7 +146,7 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
 
 
 def get_outgoing_target_row(
-        tree_model: TreeModel, line: LogLine, player_attacks: bool,
+        tree_model: TreeModel, line: LogLine, player_attacks: bool, row_constructor,
         parse_duration: int) -> tuple[TreeItem, DamageTableRow]:
     '''
     Adds the needed parents to the tree model and returns the newly created or already existing
@@ -192,7 +194,7 @@ def get_outgoing_target_row(
     if ability_target_id in tree_model.target_index[attacker_id][ability_id]:
         ability_target = tree_model.target_index[attacker_id][ability_id][ability_target_id]
     else:
-        ability_target = tree_model.add_target(DamageTableRow(
+        ability_target = tree_model.add_target(row_constructor(
                 line.target_name,
                 get_handle_from_id(ability_target_id), ability_target_id), ability_target_id,
                 ability, ability_id, attacker_id, parse_duration)

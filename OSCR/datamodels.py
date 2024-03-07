@@ -61,8 +61,7 @@ class OverviewTableRow:
         self.DPS_graph_data: list[float] = list()
         self.graph_time: list[float] = list()
         self.damage_buffer: float = 0.0
-        self.combat_start: float = None
-        self.combat_end: float = None
+        self.combat_interval: tuple[float] = None
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'

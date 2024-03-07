@@ -1,7 +1,3 @@
-from .main import OSCR
-from .datamodels import TreeItem
-from .iofunc import split_log_by_lines, split_log_by_combat
-
 __all__ = ['cli', 'datamodels', 'iofunc', 'main', 'parser', 'utilities']
 
 TABLE_HEADER = (
@@ -21,3 +17,7 @@ HEAL_TREE_HEADER = (
     '', 'HPS', 'Total Heal', 'Hull Heal', 'Hull HPS', 'Shield Heal', 'Shield HPS',
     'Max One Heal', 'Crit Chance', 'Heal Ticks', 'Critical Heals', 'Combat Time', 'Hull Heal Ticks',
     'Shield Heal Ticks')
+
+from .main import OSCR
+from .datamodels import TreeItem
+from .iofunc import split_log_by_lines, split_log_by_combat

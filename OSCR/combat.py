@@ -103,7 +103,7 @@ class Combat:
         """ """
 
         graph_timedelta = timedelta(seconds=self.graph_resolution)
-        graph_points = 1
+        graph_points = 0
         last_graph_time = self.log_data[0].timestamp
 
         self.players = {}
@@ -121,37 +121,31 @@ class Combat:
             crit_flag, miss_flag, kill_flag = get_flags(line.flags)
             if player_attacks:
                 if line.owner_id not in self.players:
-                    self.players[line.owner_id] = OverviewTableRow(
-                        line.owner_name, get_handle_from_id(line.owner_id)
-                    )
-                    self.players[line.owner_id].combat_start = line.timestamp.timestamp()
-                attacker = self.players[line.owner_id]
-                attacker.combat_end = line.timestamp.timestamp()
+                    attacker = OverviewTableRow(
+                        line.owner_name, get_handle_from_id(line.owner_id))
+                    self.players[line.owner_id] = attacker
+                    attacker.DMG_graph_data.extend(numpy.zeros(graph_points, dtype=numpy.int8))
+                    attacker.graph_time.extend(numpy.linspace(
+                            self.graph_resolution, graph_points * self.graph_resolution,
+                            graph_points, dtype=numpy.float32))
+                else:
+                    attacker = self.players[line.owner_id]
             else:
                 if line.owner_id not in self.computers:
                     self.computers[line.owner_id] = OverviewTableRow(
-                        line.owner_name, get_handle_from_id(line.owner_id)
-                    )
-                    self.computers[line.owner_id].combat_start = line.timestamp.timestamp()
+                        line.owner_name, get_handle_from_id(line.owner_id))
                 attacker = self.computers[line.owner_id]
-                attacker.combat_end = line.timestamp.timestamp()
 
             if player_attacked:
                 if line.target_id not in self.players:
                     self.players[line.target_id] = OverviewTableRow(
-                        line.target_name, get_handle_from_id(line.target_id)
-                    )
-                    self.players[line.target_id].combat_start = line.timestamp.timestamp()
+                        line.target_name, get_handle_from_id(line.target_id))
                 target = self.players[line.target_id]
-                target.combat_end = line.timestamp.timestamp()
             else:
                 if line.target_id not in self.computers:
                     self.computers[line.target_id] = OverviewTableRow(
-                        line.target_name, get_handle_from_id(line.target_id)
-                    )
-                    self.computers[line.target_id].combat_start = line.timestamp.timestamp()
+                        line.target_name, get_handle_from_id(line.target_id))
                 target = self.computers[line.target_id]
-                target.combat_end = line.timestamp.timestamp()
 
             # get table data
             if miss_flag:
@@ -167,6 +161,19 @@ class Combat:
                 if crit_flag:
                     attacker.heal_crit_num += 1
             else:
+                # Combat Duration
+                # Heals and self-damage don't affect combat time
+                if line.target_id != '*':
+                    current_time = line.timestamp.timestamp()
+                    try:
+                        attacker.combat_interval[1] = current_time
+                    except TypeError:
+                        attacker.combat_interval = [current_time, current_time]
+                    try:
+                        target.combat_interval[1] = current_time
+                    except TypeError:
+                        target.combat_interval = [current_time, current_time]
+
                 magnitude = abs(line.magnitude)
                 target.total_damage_taken += magnitude
                 if line.type == "Shield":
@@ -188,11 +195,11 @@ class Combat:
 
             # update graph
             if line.timestamp - last_graph_time >= graph_timedelta:
+                graph_points += 1
                 for player in self.players.values():
                     player.DMG_graph_data.append(player.damage_buffer)
                     player.damage_buffer = 0.0
                     player.graph_time.append(graph_points * self.graph_resolution)
-                graph_points += 1
                 last_graph_time = line.timestamp
 
     def analyze_players(self):
@@ -212,7 +219,7 @@ class Combat:
             total_heals += player.total_heals
 
         for player in self.players.values():
-            player.combat_time = player.combat_end - player.combat_start
+            player.combat_time = player.combat_interval[1] - player.combat_interval[0]
             successful_attacks = player.hull_attacks - player.misses
 
             try:
