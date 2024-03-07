@@ -4,27 +4,32 @@ from collections import namedtuple
 
 import numpy
 
-LogLine = namedtuple('LogLine', 
-        ('timestamp',
-        'owner_name', 
-        'owner_id', 
-        'source_name', 
-        'source_id', 
-        'target_name', 
-        'target_id', 
-        'event_name', 
-        'event_id', 
-        'type', 
-        'flags', 
-        'magnitude', 
-        'magnitude2'))
+LogLine = namedtuple(
+    'LogLine',
+    (
+        'timestamp',
+        'owner_name',
+        'owner_id',
+        'source_name',
+        'source_id',
+        'target_name',
+        'target_id',
+        'event_name',
+        'event_id',
+        'type',
+        'flags',
+        'magnitude',
+        'magnitude2'
+    )
+)
+
 
 class OverviewTableRow:
     '''
     Contains a single row of data
     '''
 
-    def __init__(self, name:str, handle:str):
+    def __init__(self, name: str, handle: str):
         self.name: str = name
         self.handle: str = handle
         self.combat_time: float = 0.0
@@ -50,7 +55,7 @@ class OverviewTableRow:
         self.heal_num: int = 0
         self.crit_num: int = 0
         self.misses: int = 0
-        
+
         self.resistance_sum: float = 0.0
         self.DMG_graph_data: list[float] = list()
         self.DPS_graph_data: list[float] = list()
@@ -61,10 +66,10 @@ class OverviewTableRow:
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
-    
+
     def __len__(self) -> int:
         return 25
-    
+
     def __getitem__(self, position):
         entries = {
             0: self.name,
@@ -129,6 +134,7 @@ class OverviewTableRow:
             "total_shield_damage_taken": self.total_shield_damage_taken,
         }
 
+
 class AnalysisTableRow():
     """
     Superclass for damage and heal table rows
@@ -136,11 +142,12 @@ class AnalysisTableRow():
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
 
+
 class DamageTableRow(AnalysisTableRow):
     """
-    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_damage, 
-    max_one_hit, kills, total_attacks, misses, crit_num, flank_num, total_shield_damage, total_hull_damage,
-    total_base_damage, combat_time, hull_attacks, shield_attacks)
+    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_damage,
+    max_one_hit, kills, total_attacks, misses, crit_num, flank_num, total_shield_damage,
+    total_hull_damage, total_base_damage, combat_time, hull_attacks, shield_attacks)
     """
     def __init__(self, name: str, handle: str, id: str):
         """
@@ -149,7 +156,8 @@ class DamageTableRow(AnalysisTableRow):
         - :param handle: handle of the entity
         - :param id: id of the entity
         """
-        # commented attributes represent additional fields in the final result, but are not required here
+        # commented attributes represent additional fields in the final result, that are not
+        # required here
         self.name: str = name if name else '*'
         self.handle: str = handle
         # self.DPS: float = 0.0
@@ -173,15 +181,15 @@ class DamageTableRow(AnalysisTableRow):
         self.combat_time: float = 0.0
         self.hull_attacks: int = 0
         self.shield_attacks: int = 0
-        
+
         self.id: str = id
         self.resistance_sum: float = 0.0
         self.combat_start: float = None
         self.combat_end: float = None
-    
+
     def __len__(self) -> int:
         return 15
-    
+
     def __getitem__(self, position: int):
         entries = {
             0: self.name,
@@ -205,11 +213,13 @@ class DamageTableRow(AnalysisTableRow):
             raise StopIteration()
 
         return entries[position]
-    
+
+
 class HealTableRow(AnalysisTableRow):
     """
-    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_heal, hull_heal, 
-    shield_heal, max_one_heal, heal_ticks, critical_heals, combat_time, hull_heal_ticks, shield_heal_ticks)
+    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_heal,
+    hull_heal, shield_heal, max_one_heal, heal_ticks, critical_heals, combat_time, hull_heal_ticks,
+    shield_heal_ticks)
     """
 
     def __init__(self, name: str, handle: str, id: str):
@@ -219,7 +229,8 @@ class HealTableRow(AnalysisTableRow):
         - :param handle: handle of the entity
         - :param id: id of the entity
         """
-        # commented attributes represent additional fields in the final result, but are not required here
+        # commented attributes represent additional fields in the final result, that are not
+        # required here
         self.name: str = name if name else '*'
         self.handle: str = handle
         # self.HPS: float = 0.0
@@ -238,11 +249,11 @@ class HealTableRow(AnalysisTableRow):
 
         self.id: str = id
         self.combat_start: float = None
-        self.combat_end: flaot = None
+        self.combat_end: float = None
 
     def __len__(self) -> int:
         return 11
-    
+
     def __getitem__(self, position: int):
         entries = {
             0: self.name,
@@ -263,6 +274,7 @@ class HealTableRow(AnalysisTableRow):
 
         return entries[position]
 
+
 class TreeItem():
     """
     Item that contains data and children optionally.
@@ -282,34 +294,34 @@ class TreeItem():
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: data={self.data}>'
-    
+
     def __iter__(self):
         return iter(self.data)
 
-    def get_child(self, row:int):
+    def get_child(self, row: int):
         try:
             return self._children[row]
         except IndexError:
             return None
-    
+
     def append_child(self, item):
         self._children.append(item)
 
     @property
     def child_count(self):
         return len(self._children)
-    
+
     @property
     def row(self):
         if self.parent is not None:
             return self.parent._children.index(self)
         return 0
-    
+
     @property
     def column_count(self):
         return len(self.data)
-    
-    def get_data(self, column:int):
+
+    def get_data(self, column: int):
         try:
             return self.data[column]
         except IndexError:
@@ -317,11 +329,12 @@ class TreeItem():
                 return self.data
             return None
 
+
 class TreeModel():
     """
     Data model that contains a hierachical table.
     """
-    
+
     def __init__(self, header: tuple[str]):
         self.actor_index = dict()
         self.ability_index = dict()
@@ -337,8 +350,9 @@ class TreeModel():
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} with columns {self._root.data}>'
-    
-    def add_actor(self, name: str, handle: str, id: str, row_constructor: AnalysisTableRow,
+
+    def add_actor(
+            self, name: str, handle: str, id: str, row_constructor: AnalysisTableRow,
             player: bool = True) -> TreeItem:
         """
         Adds Player or NPC to model.
@@ -416,7 +430,8 @@ class TreeModel():
         self.target_index[pet_id] = dict()
         return pet
 
-    def add_target(self, data: AnalysisTableRow, target_id: str, ability: TreeItem, ability_id: str,
+    def add_target(
+            self, data: AnalysisTableRow, target_id: str, ability: TreeItem, ability_id: str,
             actor_id: str, parse_duration: int) -> TreeItem:
         """
         Adds target to model. target is inserted as child to the given ability.
@@ -433,11 +448,12 @@ class TreeModel():
         ability.append_child(target)
         self.target_index[actor_id][ability_id][target_id] = target
         return target
-    
-    def add_source_actor(self, name: tuple[str], source_id: str, actor: TreeItem, actor_id: str) -> TreeItem:
+
+    def add_source_actor(
+            self, name: tuple[str], source_id: str, actor: TreeItem, actor_id: str) -> TreeItem:
         """
-        Adds source actor to model. Source actor is inserted as child to the given actor. Used for incoming
-        damage / heal table.
+        Adds source actor to model. Source actor is inserted as child to the given actor. Used for
+        incoming damage / heal table.
 
         Parameters:
         - :param name: name of the source
@@ -451,12 +467,13 @@ class TreeModel():
         self.source_index[actor_id][source_id] = source
         self.ability_index[actor_id][source_id] = dict()
         return source
-    
-    def add_source_ability(self, data: AnalysisTableRow, ability_id: str, source: TreeItem, source_id: str,
+
+    def add_source_ability(
+            self, data: AnalysisTableRow, ability_id: str, source: TreeItem, source_id: str,
             actor_id: str, parse_duration: int) -> TreeItem:
         """
-        Adds ability to model. Ability is inserted as child to the given source. Used for incoming damage / 
-        heal table
+        Adds ability to model. Ability is inserted as child to the given source. Used for incoming
+        damage / heal table
 
         Parameters:
         - :param data: row of data for the target. First entry must be the name of the target

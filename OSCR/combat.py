@@ -1,7 +1,7 @@
 """ This file implements the Combat class """
 
 from collections import deque
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import numpy
 
@@ -57,7 +57,8 @@ def check_difficulty_damage(data, metadata):
 
 class Combat:
     """
-    Contains a single combat including raw log lines, map and combat information and shallow parse results.
+    Contains a single combat including raw log lines, map and combat information and shallow parse
+    results.
     """
 
     def __init__(self):
@@ -286,7 +287,8 @@ class Combat:
             self.add_entity_to_computer_meta(entity_name)
             self.computer_meta[entity_name]["count"] += 1
             self.computer_meta[entity_name]["deaths"] += entity.deaths
-            self.computer_meta[entity_name]["total_hull_damage_taken"].append(entity.total_hull_damage_taken)
+            total_hull_damage_taken = self.computer_meta[entity_name]["total_hull_damage_taken"]
+            total_hull_damage_taken.append(entity.total_hull_damage_taken)
 
         data = Detection.MAP_DIFFICULTY_ENTITY_DEATH_COUNTS.get(self.map)
         if data is None:
@@ -339,13 +341,14 @@ class Combat:
 
     def __repr__(self) -> str:
         return (
-            f"<{self.__class__.__name__} - Map: {self.map} - Difficulty: {self.difficulty} - Datetime: "
-            f"{self.start_time}>"
+            f"<{self.__class__.__name__} - Map: {self.map} - Difficulty: {self.difficulty} - "
+            f"Datetime: {self.start_time}>"
         )
 
     def __gt__(self, other):
         if not isinstance(other, Combat):
-            raise TypeError(f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
+            raise TypeError(
+                f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
         if isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
             return self.date_time > other.date_time
         if not isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):

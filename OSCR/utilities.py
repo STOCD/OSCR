@@ -2,12 +2,11 @@ from datetime import datetime
 from re import search as re_search
 from typing import Generator, Iterable
 
-from .datamodels import LogLine
-
 PLAYER_HANDLE_REGEX = '^P\\[.+?@.+?(?P<handle>@.+?)\\]$'
 COMPUTER_HANDLE_REGEX = '^C\\[(?P<handle>\\d+).+?\\]$'
 
-def to_datetime(date_time:str) -> datetime:
+
+def to_datetime(date_time: str) -> datetime:
     '''
     returns datetime object from combatlog string containing date and time
     '''
@@ -18,19 +17,23 @@ def to_datetime(date_time:str) -> datetime:
     date_time_list[6] *= 100000
     return datetime(*date_time_list)
 
-def datetime_to_str(date_time:datetime) -> str:
+
+def datetime_to_str(date_time: datetime) -> str:
     '''
     Converts datetime object to str timestamp. Truncates microseconds to tenth of seconds.
     '''
-    return (f'{str(date_time.year)[-2:]}:{date_time.month:02d}:{date_time.day:02d}:{date_time.hour:02d}:'
-            f'{date_time.minute:02d}:{date_time.second:02d}.{str(date_time.microsecond)[0]}')
+    return (f'{str(date_time.year)[-2:]}:{date_time.month:02d}:{date_time.day:02d}:'
+            f'{date_time.hour:02d}:{date_time.minute:02d}:{date_time.second:02d}.'
+            f'{str(date_time.microsecond)[0]}')
 
-def datetime_to_display(date_time:datetime) -> str:
+
+def datetime_to_display(date_time: datetime) -> str:
     '''
     Converts datetime object to formatted string.
     '''
     return (f'{date_time.year}-{date_time.month:02d}-{date_time.day:02d} {date_time.hour:02d}:'
             f'{date_time.minute:02d}:{date_time.second:02d}')
+
 
 def logline_to_str(line) -> str:
     '''
@@ -38,11 +41,12 @@ def logline_to_str(line) -> str:
     '''
     if isinstance(line, str):
         return line.strip() + '\n'
-    
+
     timestamp = datetime_to_str(line.timestamp)
     return f'{timestamp}::{",".join(line[1:11])},{line[11]},{line[12]}\n'
 
-def get_handle_from_id(id_str:str) -> str:
+
+def get_handle_from_id(id_str: str) -> str:
     '''
     returns player handle from is string
     '''
@@ -80,6 +84,7 @@ def get_flags(flag_str: str) -> tuple[bool]:
     kill = "Kill" in flag_str
     return (critical_hit, miss, kill)
 
+
 def reversed_index(length: int) -> Generator[int, None, None]:
     '''
     Generator that yields the indices for an iterable with given length in reversed order.
@@ -91,6 +96,7 @@ def reversed_index(length: int) -> Generator[int, None, None]:
     while counter > 0:
         counter -= 1
         yield counter
+
 
 def bundle(*iterables: Iterable) -> Generator:
     """

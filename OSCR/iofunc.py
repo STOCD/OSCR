@@ -7,17 +7,20 @@ from datetime import timedelta
 
 from .utilities import to_datetime, logline_to_str
 
-def format_timestamp(timestamp:str) -> str:
+
+def format_timestamp(timestamp: str) -> str:
     '''
     Formats timestamp. '24:01:13:04:37:45.7' becomes '24-01-13_04:37:45'
     '''
     return timestamp.replace(':', '-', 2).replace(':', '_', 1).split('.')[0]
 
+
 def is_gz_file(filepath):
     with open(filepath, 'rb') as test_f:
         return test_f.read(2) == b'\x1f\x8b'
 
-def get_lines(log_path:str) -> list:
+
+def get_lines(log_path: str) -> list:
     '''
     Returns a list of lines parsed from the log file.
     This function is aware that the file being passed in could be gzipped.
@@ -33,40 +36,49 @@ def get_lines(log_path:str) -> list:
 
     return lines_list
 
-def get_combat_log_data(log_path:str):
+
+def get_combat_log_data(log_path: str):
     if not (os.path.exists(log_path) and os.path.isfile(log_path)):
         raise FileNotFoundError(f'Invalid Path: {log_path}')
     if os.path.getsize(log_path) > 125 * 1024 * 1024:
-        raise FileExistsError(f'File at {log_path} is too large. Use get_massive_log_data(...) instead')
+        raise FileExistsError(
+                f'File at {log_path} is too large. Use get_massive_log_data(...) instead')
     lines_list = get_lines(log_path)
     if len(lines_list) < 1 or not lines_list[0].strip():
         raise TypeError('File must contain at least one not-empty line')
-    if not '::' in lines_list[0] or not ',' in lines_list[0]:
-        raise TypeError("First line invalid. First line may not be empty and must contain '::' and ','.")
+    if '::' not in lines_list[0] or ',' not in lines_list[0]:
+        raise TypeError(
+                "First line invalid. First line may not be empty and must contain '::' and ','.")
     return lines_list
 
-def get_massive_log_data(log_path:str, temp_folder_path:str, combat_distance:int = 100) -> tuple[list, list]:
+
+def get_massive_log_data(
+        log_path: str, temp_folder_path: str, combat_distance: int = 100) -> tuple[list, list]:
     '''
-    Get log lines from massive combatlog file. Return the latest about 480000 lines of the log as well
-    as paths to temporary files containing the remaining lines.
+    Get log lines from massive combatlog file. Return the latest about 480000 lines of the log as
+    well as paths to temporary files containing the remaining lines.
     '''
     absolute_target_path = os.path.abspath(temp_folder_path)
     if not (os.path.exists(log_path) and os.path.isfile(log_path)):
         raise FileNotFoundError(f'Invalid Log Path: {log_path}')
     if not (os.path.exists(absolute_target_path) and os.path.isdir(absolute_target_path)):
         raise FileNotFoundError(f'Invalid or not existing target path: {absolute_target_path}')
-    splitted_log_paths = split_log_by_lines(log_path, temp_folder_path, combat_distance=combat_distance)
+    splitted_log_paths = split_log_by_lines(
+            log_path, temp_folder_path, combat_distance=combat_distance)
     with open(splitted_log_paths[-1], 'r', encoding='utf-8') as file:
         lines_list = file.readlines()
     return (lines_list, splitted_log_paths)
 
-def split_log_by_lines(log_path:str, target_path:str, approx_lines_per_file:int = 480000, 
-        combat_distance:int = 100) -> list:
+
+def split_log_by_lines(
+        log_path: str, target_path: str, approx_lines_per_file: int = 480000,
+        combat_distance: int = 100) -> list:
     '''
-    Splits the combat at log_path into multiple files saved in the directory at target_path and 
+    Splits the combat at log_path into multiple files saved in the directory at target_path and
     returns the paths to the files.
     '''
-    def save_partial_log(directory_path:str, filename:str, lines:list, filepath_list:list) -> str:
+    def save_partial_log(
+            directory_path: str, filename: str, lines: list, filepath_list: list) -> str:
         start_time = format_timestamp(lines[0].split('::')[0])
         end_time = format_timestamp(lines[-1].split('::')[0])
         new_filename = sanitize_file_name(f'[{start_time}--{end_time}]{filename}')
@@ -102,19 +114,22 @@ def split_log_by_lines(log_path:str, target_path:str, approx_lines_per_file:int 
             while True:
                 line = log_file.readline()
                 if not line:
-                    save_partial_log(absolute_target_path, original_filename, current_lines, filepaths)
+                    save_partial_log(
+                            absolute_target_path, original_filename, current_lines, filepaths)
                     return filepaths
                 log_time = to_datetime(line.split('::')[0])
                 if log_time - last_log_time > combat_delta:
-                    save_partial_log(absolute_target_path, original_filename, current_lines, filepaths)
+                    save_partial_log(
+                            absolute_target_path, original_filename, current_lines, filepaths)
                     current_lines = [line]
                     break
                 current_lines.append(line)
-        
-def read_lines(file:TextIOWrapper, num:int, input_list=None) -> tuple[list, bool]:
+
+
+def read_lines(file: TextIOWrapper, num: int, input_list=None) -> tuple[list, bool]:
     '''
-    Read num lines from file and return them along with a boolean value indicating whether the end of the
-    file was reached during the read process.
+    Read num lines from file and return them along with a boolean value indicating whether the end
+    of the file was reached during the read process.
     '''
     if input_list is None:
         lines = list()
@@ -129,8 +144,10 @@ def read_lines(file:TextIOWrapper, num:int, input_list=None) -> tuple[list, bool
         lines.append(line)
     return (lines, end_of_file)
 
-def split_log_by_combat(log_path: str, target_path: str, first_num: str, last_num: str, 
-        combat_distance: int = 100, excluded_event_ids: list = []):
+
+def split_log_by_combat(
+        log_path: str, target_path: str, first_num: str, last_num: str, combat_distance: int = 100,
+        excluded_event_ids: list = []):
     """
     Splits off a number of combats from logfile and saves them to target path.
 
@@ -170,7 +187,7 @@ def split_log_by_combat(log_path: str, target_path: str, first_num: str, last_nu
                         if not current_combat_lines[0].split(',')[7] in excluded_event_ids:
                             target_file.writelines(current_combat_lines)
                     if to_end:
-                            last_num += 1
+                        last_num += 1
                     if current_combat >= last_num:
                         return
                     if not current_combat_lines[0].split(',')[7] in excluded_event_ids:
@@ -180,7 +197,7 @@ def split_log_by_combat(log_path: str, target_path: str, first_num: str, last_nu
                 last_log_time = log_time
 
 
-def save_log(path:str, lines:list, overwrite: bool = False):
+def save_log(path: str, lines: list, overwrite: bool = False):
     '''
     Saves lines to new file.
 
@@ -195,7 +212,8 @@ def save_log(path:str, lines:list, overwrite: bool = False):
         for line in map(logline_to_str, lines):
             file.write(line)
 
-def reset_temp_folder(path:str):
+
+def reset_temp_folder(path: str):
     '''
     Deletes and re-creates folder housing temporary log files.
     '''
@@ -205,7 +223,6 @@ def reset_temp_folder(path:str):
         else:
             raise FileExistsError(f'Expected path to folder, got "{path}"')
     os.mkdir(path)
-        
 
 
 def sanitize_file_name(txt, chr_set='extended') -> str:
@@ -213,7 +230,7 @@ def sanitize_file_name(txt, chr_set='extended') -> str:
 
     Parameters:
     - :param txt: The path to convert.
-    - :param chr_set: 
+    - :param chr_set:
         - 'printable':    Any printable character except those disallowed on Windows/*nix.
         - 'extended':     'printable' + extended ASCII character codes 128-255
         - 'universal':    For almost *any* file system.
@@ -226,15 +243,16 @@ def sanitize_file_name(txt, chr_set='extended') -> str:
     white_lists = {
         'universal': {'-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'},
         'printable': {chr(x) for x in range(32, 127)} - BLACK_LIST,     # 0-32, 127 are unprintable,
-        'extended' : {chr(x) for x in range(32, 256)} - BLACK_LIST,
+        'extended': {chr(x) for x in range(32, 256)} - BLACK_LIST,
     }
     white_list = white_lists[chr_set]
     result = ''.join(x if x in white_list else FILLER for x in txt)
 
     # Step 2: Device names, '.', and '..' are invalid filenames in Windows.
-    DEVICE_NAMES = ('CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7',
-            'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9', 'CONIN$',
-            'CONOUT$', '..', '.')
+    DEVICE_NAMES = (
+            'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6',
+            'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8',
+            'LPT9', 'CONIN$', 'CONOUT$', '..', '.')
     if '.' in txt:
         name, _, ext = result.rpartition('.')
         ext = f'.{ext}'

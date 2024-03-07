@@ -14,7 +14,8 @@ def list_combats(parser):
     """List the parsed combats but do not do any analysis"""
     for combat in parser.combats:
         print(
-            f"start={combat.start_time} end={combat.end_time} duration={combat.duration} map={combat.map} difficulty={combat.difficulty}"
+            f"start={combat.start_time} end={combat.end_time} duration={combat.duration} "
+            "map={combat.map} difficulty={combat.difficulty}"
         )
 
 
