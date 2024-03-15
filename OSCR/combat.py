@@ -163,7 +163,7 @@ class Combat:
             else:
                 # Combat Duration
                 # Heals and self-damage don't affect combat time
-                if line.target_id != '*':
+                if line.target_id != '*' and line.event_name != 'Warp Core Breach':
                     current_time = line.timestamp.timestamp()
                     try:
                         attacker.combat_interval[1] = current_time

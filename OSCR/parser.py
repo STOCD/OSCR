@@ -76,7 +76,7 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
 
             # Combat Duration
             # Heals and self-damage don't affect combat time
-            if ability_target.name != '*':
+            if ability_target.name != '*' and line.event_name != 'Warp Core Breach':
                 try:
                     actor_combat_durations[line.owner_id][1] = timestamp
                 except KeyError:
@@ -138,10 +138,11 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
         actor_combat_durations[actor_id] = round((end_time - start_time).total_seconds(), 1)
 
     merge_single_lines(dmg_out_model)
-    complete_damage_tree(dmg_out_model, actor_combat_durations)
-    complete_damage_tree(dmg_in_model, actor_combat_durations)
-    complete_heal_tree(heal_out_model, actor_combat_durations)
-    complete_heal_tree(heal_in_model, actor_combat_durations)
+    combat_duration = combat_duration_delta.total_seconds()
+    complete_damage_tree(dmg_out_model, actor_combat_durations, combat_duration)
+    complete_damage_tree(dmg_in_model, actor_combat_durations, combat_duration)
+    complete_heal_tree(heal_out_model, actor_combat_durations, combat_duration)
+    complete_heal_tree(heal_in_model, actor_combat_durations, combat_duration)
     return dmg_out_model, dmg_in_model, heal_out_model, heal_in_model
 
 
@@ -540,7 +541,8 @@ def complete_heal_sub_tree(item: TreeItem, combat_time):
     item.graph_data = numpy.sum(graph_data, axis=0, dtype=numpy.float64)
 
 
-def complete_damage_tree(tree_model: TreeModel, combat_durations: dict):
+def complete_damage_tree(
+        tree_model: TreeModel, combat_durations: dict, total_combat_duration: float):
     '''
     Merges the data from the bottom up to fill all lines.
 
@@ -549,12 +551,12 @@ def complete_damage_tree(tree_model: TreeModel, combat_durations: dict):
     - :param combat_durations: combat durations for all actors
     '''
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
-        current_combat_time = combat_durations[actor.data.id[0]]
+        current_combat_time = combat_durations.get(actor.data.id[0], total_combat_duration)
         actor.data.combat_time = current_combat_time
         complete_damage_sub_tree(actor, current_combat_time)
 
 
-def complete_heal_tree(tree_model: TreeModel, combat_durations: dict):
+def complete_heal_tree(tree_model: TreeModel, combat_durations: dict, total_combat_duration: float):
     '''
     Merges the data from the bottom up to fill all lines.
 
@@ -563,6 +565,6 @@ def complete_heal_tree(tree_model: TreeModel, combat_durations: dict):
     - :param combat_durations: combat durations for all actors
     '''
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
-        current_combat_time = combat_durations[actor.data.id[0]]
+        current_combat_time = combat_durations.get(actor.data.id[0], total_combat_duration)
         actor.data.combat_time = current_combat_time
         complete_heal_sub_tree(actor, current_combat_time)
