@@ -242,6 +242,26 @@ class Detection:
         },
     }
 
+    BUILD_DETECTION_ABILITIES = {
+        # DEW
+        "Overload III": "Beams: Overload",
+        "Rapid Fire III": "Cannons: Rapid Fire",
+        "Scatter Volley III": "Cannons: Scatter Volley",
+        "Fire at Will III": "Beams: Fire At Will",
+        "Surgical Strikes III": "Surgical Strikes",
+        # Kinetic
+        "Isolytic Tear": "Kinetic",
+        # EPG
+        "Electrified Anomalies": "Exotic",
+        "Deteriorating Secondary Deflector": "Exotic",
+        "Gravity Well III": "Exotic",
+        # Support
+        "Greater Than The Sum": "Support",
+        # Classify these last
+        "Fire at Will II": "Beams: Fire At Will",
+        "Thalaron Pulse": "Thalaron Pulse",
+    }
+
     @staticmethod
     def detect_line(line: LogLine) -> tuple:
         """
