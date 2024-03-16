@@ -1,4 +1,4 @@
-__all__ = ['cli', 'datamodels', 'iofunc', 'main', 'parser', 'utilities']
+__all__ = ['cli', 'combat', 'datamodels', 'detection', 'iofunc', 'main', 'parser', 'utilities']
 
 TABLE_HEADER = (
     'Combat Time', 'DPS', 'Total Damage', 'Debuff', 'Attacks-in Share',
