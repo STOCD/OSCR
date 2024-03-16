@@ -133,6 +133,7 @@ class OverviewTableRow:
             "total_damage_taken": self.total_damage_taken,
             "total_hull_damage_taken": self.total_hull_damage_taken,
             "total_shield_damage_taken": self.total_shield_damage_taken,
+            "build": self.build,
         }
 
 
