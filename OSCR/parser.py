@@ -549,7 +549,7 @@ def complete_damage_tree(tree_model: TreeModel, combat_durations: dict):
     - :param combat_durations: combat durations for all actors
     '''
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
-        current_combat_time = combat_durations[actor.data.id[0]]
+        current_combat_time = combat_durations.get(actor.data.id[0], 0)
         actor.data.combat_time = current_combat_time
         complete_damage_sub_tree(actor, current_combat_time)
 
@@ -563,6 +563,6 @@ def complete_heal_tree(tree_model: TreeModel, combat_durations: dict):
     - :param combat_durations: combat durations for all actors
     '''
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
-        current_combat_time = combat_durations[actor.data.id[0]]
+        current_combat_time = combat_durations.get(actor.data.id[0], 0)
         actor.data.combat_time = current_combat_time
         complete_heal_sub_tree(actor, current_combat_time)
