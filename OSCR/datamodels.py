@@ -62,6 +62,8 @@ class OverviewTableRow:
         self.graph_time: list[float] = list()
         self.damage_buffer: float = 0.0
         self.combat_interval: tuple[float] = None
+        self.events: list[str] = list()
+        self.build: str = "Unknown"
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
@@ -131,6 +133,7 @@ class OverviewTableRow:
             "total_damage_taken": self.total_damage_taken,
             "total_hull_damage_taken": self.total_hull_damage_taken,
             "total_shield_damage_taken": self.total_shield_damage_taken,
+            "build": self.build,
         }
 
 

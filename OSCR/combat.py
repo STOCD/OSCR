@@ -14,7 +14,7 @@ def check_difficulty_deaths(data, metadata):
     """
     Check deaths against combat metadata
     data: difficulty-based dicitionary in MAP_DIFFICULTY_ENTITY_DEATH_COUNTS
-    metadata: Combat metadata from analyze_computers
+    metadata: Combat metadata from analyze_critters
     returns True on match, otherwise False
     """
 
@@ -33,7 +33,7 @@ def check_difficulty_damage(data, metadata):
     """
     Check hull damage taken against combat metadata
     data: difficulty-based dicitionary in MAP_DIFFICULTY_ENTITY_HULL_COUNTS
-    metadata: Combat metadata from analyze_computers
+    metadata: Combat metadata from analyze_critters
     returns True on match, otherwise False
     """
 
@@ -68,8 +68,8 @@ class Combat:
         self.start_time = None
         self.end_time = None
         self.players = {}
-        self.computers = {}
-        self.computer_meta = {}
+        self.critters = {}
+        self.critter_meta = {}
 
     def analyze_last_line(self):
         """Analyze the last line and try and detect the map and difficulty"""
@@ -97,7 +97,7 @@ class Combat:
         self.graph_resolution = graph_resolution
         self.analyze_log_data()
         self.analyze_players()
-        self.analyze_computers()
+        self.analyze_critters()
 
     def analyze_log_data(self):
         """ """
@@ -107,8 +107,8 @@ class Combat:
         last_graph_time = self.log_data[0].timestamp
 
         self.players = {}
-        self.computers = {}
-        self.computer_meta = {}
+        self.critters = {}
+        self.critter_meta = {}
 
         for line in self.log_data:
             # manage entites
@@ -121,31 +121,39 @@ class Combat:
             crit_flag, miss_flag, kill_flag = get_flags(line.flags)
             if player_attacks:
                 if line.owner_id not in self.players:
-                    attacker = OverviewTableRow(
-                        line.owner_name, get_handle_from_id(line.owner_id))
+                    attacker = OverviewTableRow(line.owner_name, get_handle_from_id(line.owner_id))
                     self.players[line.owner_id] = attacker
                     attacker.DMG_graph_data.extend(numpy.zeros(graph_points, dtype=numpy.int8))
-                    attacker.graph_time.extend(numpy.linspace(
-                            self.graph_resolution, graph_points * self.graph_resolution,
-                            graph_points, dtype=numpy.float32))
+                    attacker.graph_time.extend(
+                        numpy.linspace(
+                            self.graph_resolution,
+                            graph_points * self.graph_resolution,
+                            graph_points,
+                            dtype=numpy.float32,
+                        )
+                    )
+                    attacker.events = []
                 else:
                     attacker = self.players[line.owner_id]
             else:
-                if line.owner_id not in self.computers:
-                    self.computers[line.owner_id] = OverviewTableRow(
-                        line.owner_name, get_handle_from_id(line.owner_id))
-                attacker = self.computers[line.owner_id]
+                if line.owner_id not in self.critters:
+                    self.critters[line.owner_id] = OverviewTableRow(
+                        line.owner_name, get_handle_from_id(line.owner_id)
+                    )
+                attacker = self.critters[line.owner_id]
 
             if player_attacked:
                 if line.target_id not in self.players:
                     self.players[line.target_id] = OverviewTableRow(
-                        line.target_name, get_handle_from_id(line.target_id))
+                        line.target_name, get_handle_from_id(line.target_id)
+                    )
                 target = self.players[line.target_id]
             else:
-                if line.target_id not in self.computers:
-                    self.computers[line.target_id] = OverviewTableRow(
-                        line.target_name, get_handle_from_id(line.target_id))
-                target = self.computers[line.target_id]
+                if line.target_id not in self.critters:
+                    self.critters[line.target_id] = OverviewTableRow(
+                        line.target_name, get_handle_from_id(line.target_id)
+                    )
+                target = self.critters[line.target_id]
 
             # get table data
             if miss_flag:
@@ -202,6 +210,9 @@ class Combat:
                     player.graph_time.append(graph_points * self.graph_resolution)
                 last_graph_time = line.timestamp
 
+            if line.event_name not in attacker.events:
+                attacker.events.append(line.event_name)
+
     def analyze_players(self):
         """
         Analyze players to determine time-based metrics such as DPS.
@@ -211,6 +222,13 @@ class Combat:
         total_damage_taken = 0
         total_attacks = 0
         total_heals = 0
+
+        # Filter out players with no combat time.
+        players = {}
+        for key, player in self.players.items():
+            if player.combat_interval is not None and player.events is not None:
+                players[key] = player
+        self.players = players
 
         for player in self.players.values():
             total_damage += player.total_damage
@@ -256,11 +274,17 @@ class Combat:
             except ZeroDivisionError:
                 player.heal_share = 0.0
 
+            for k, v in Detection.BUILD_DETECTION_ABILITIES.items():
+                for event in player.events:
+                    if k in event:
+                        player.build = v
+                        break
+
             player.graph_time = tuple(map(lambda x: round(x, 1), player.graph_time))
             DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
             player.DPS_graph_data = tuple(DPS_data / player.graph_time)
 
-    def analyze_computers(self):
+    def analyze_critters(self):
         """
         Analyze map entities Computers to determine:
             - The map type
@@ -289,12 +313,12 @@ class Combat:
         if self.map == "Combat":
             return
 
-        for entity_id, entity in self.computers.items():
+        for entity_id, entity in self.critters.items():
             entity_name = get_entity_name(entity_id)
-            self.add_entity_to_computer_meta(entity_name)
-            self.computer_meta[entity_name]["count"] += 1
-            self.computer_meta[entity_name]["deaths"] += entity.deaths
-            total_hull_damage_taken = self.computer_meta[entity_name]["total_hull_damage_taken"]
+            self.add_entity_to_critter_meta(entity_name)
+            self.critter_meta[entity_name]["count"] += 1
+            self.critter_meta[entity_name]["deaths"] += entity.deaths
+            total_hull_damage_taken = self.critter_meta[entity_name]["total_hull_damage_taken"]
             total_hull_damage_taken.append(entity.total_hull_damage_taken)
 
         data = Detection.MAP_DIFFICULTY_ENTITY_DEATH_COUNTS.get(self.map)
@@ -303,7 +327,7 @@ class Combat:
             return
 
         for difficulty, entry in data.items():
-            if check_difficulty_deaths(entry, self.computer_meta):
+            if check_difficulty_deaths(entry, self.critter_meta):
                 _difficulty = difficulty
                 break
 
@@ -314,7 +338,7 @@ class Combat:
 
         matched = False
         for difficulty, entry in data.items():
-            if check_difficulty_damage(entry, self.computer_meta):
+            if check_difficulty_damage(entry, self.critter_meta):
                 matched = True
                 _difficulty = difficulty
                 break
@@ -323,10 +347,10 @@ class Combat:
 
         self.difficulty = _difficulty
 
-    def add_entity_to_computer_meta(self, entity_name):
-        """Adds a new entry to the computer metadata"""
-        if self.computer_meta.get(entity_name) is None:
-            self.computer_meta[entity_name] = {
+    def add_entity_to_critter_meta(self, entity_name):
+        """Adds a new entry to the critter metadata"""
+        if self.critter_meta.get(entity_name) is None:
+            self.critter_meta[entity_name] = {
                 "count": 0,
                 "deaths": 0,
                 "total_hull_damage_taken": [],
@@ -334,7 +358,10 @@ class Combat:
 
     @property
     def duration(self):
-        return self.end_time - self.start_time
+        dur = self.end_time - self.start_time
+        if dur < 0:
+            return 0
+        return dur
 
     @property
     def date_time(self):
@@ -354,8 +381,7 @@ class Combat:
 
     def __gt__(self, other):
         if not isinstance(other, Combat):
-            raise TypeError(
-                f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
+            raise TypeError(f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
         if isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
             return self.date_time > other.date_time
         if not isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):

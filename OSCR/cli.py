@@ -30,17 +30,22 @@ def shallow(args, parser):
 
         print("  Players (Damage)")
         for k, v in parser.active_combat.player_dict.items():
-            print(f"    {v.name}{v.handle}: {v.total_damage:,.0f} ({v.DPS:,.0f} DPS)")
+            print(f"    {v.name}{v.handle}: damage={v.total_damage:,.0f} dps={v.DPS:,.0f} build={v.build}")
 
         if args.metadata:
             print("  Computers:")
-            for k, v in parser.active_combat.computer_meta.items():
+            for k, v in parser.active_combat.critter_meta.items():
                 if v["deaths"] == 0:
                     continue
                 perc = numpy.percentile(v["total_hull_damage_taken"], 50)
-                print(
-                    f"    {k}: count={v['count']} deaths={v['deaths']} hull={perc:.0f}"
-                )
+                print(f"    {k}: count={v['count']} deaths={v['deaths']} hull={perc:.0f}")
+
+        if args.events:
+            print(" Events (Players)")
+            for k, v in parser.active_combat.player_dict.items():
+                print(f"    {v.name}{v.handle}:")
+                for event in v.events:
+                    print(f"      {event}")
 
 
 def main():
@@ -50,6 +55,7 @@ def main():
     parser.add_argument("-l", "--list", action=argparse.BooleanOptionalAction)
     parser.add_argument("-s", "--shallow", action=argparse.BooleanOptionalAction)
     parser.add_argument("-m", "--metadata", action=argparse.BooleanOptionalAction)
+    parser.add_argument("-e", "--events", action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
 
     parser = OSCR.OSCR(args.input)
