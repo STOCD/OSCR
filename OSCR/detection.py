@@ -244,11 +244,13 @@ class Detection:
 
     BUILD_DETECTION_ABILITIES = {
         # DEW
-        "Overload III": "Beams: Overload",
+        "Surgical Strikes III": "Surgical Strikes",
+        "Reroute Reserves to Weapons": "Reroute Reserves to Weapons",
+        "Exceed Rated Limits": "Exceed Rated Limits",
         "Rapid Fire III": "Cannons: Rapid Fire",
         "Scatter Volley III": "Cannons: Scatter Volley",
+        "Overload III": "Beams: Overload",
         "Fire at Will III": "Beams: Fire At Will",
-        "Surgical Strikes III": "Surgical Strikes",
         # Kinetic
         "Isolytic Tear": "Kinetic",
         # EPG
@@ -257,8 +259,11 @@ class Detection:
         "Gravity Well III": "Exotic",
         # Support
         "Greater Than The Sum": "Support",
-        # Classify these last
+        # Lower Rank abilities that may be commonly used.
+        "Rapid Fire II": "Cannons: Rapid Fire",
+        "Scatter Volley II": "Cannons: Scatter Volley",
         "Fire at Will II": "Beams: Fire At Will",
+        # Classify these last
         "Thalaron Pulse": "Thalaron Pulse",
     }
 
