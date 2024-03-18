@@ -75,8 +75,8 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
                     dmg_in_model, line, player_attacked, DamageTableRow, combat_duration_sec)
 
             # Combat Duration
-            # Heals and self-damage don't affect combat time
-            if ability_target.name != '*' and line.event_name != 'Warp Core Breach':
+            # Heals, damage taken and self-damage don't affect combat time
+            if ability_target.name != '*':
                 try:
                     actor_combat_durations[line.owner_id][1] = timestamp
                 except KeyError:
@@ -85,10 +85,6 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
                     actor_combat_durations[line.source_id][1] = timestamp
                 except KeyError:
                     actor_combat_durations[line.source_id] = [timestamp, timestamp]
-                try:
-                    actor_combat_durations[line.target_id][1] = timestamp
-                except KeyError:
-                    actor_combat_durations[line.target_id] = [timestamp, timestamp]
 
             # get table data
             if miss_flag:

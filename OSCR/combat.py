@@ -170,17 +170,13 @@ class Combat:
                     attacker.heal_crit_num += 1
             else:
                 # Combat Duration
-                # Heals and self-damage don't affect combat time
-                if line.target_id != '*' and line.event_name != 'Warp Core Breach':
+                # Heals, damage taken and self-damage don't affect combat time
+                if line.target_id != '*':
                     current_time = line.timestamp.timestamp()
                     try:
                         attacker.combat_interval[1] = current_time
                     except TypeError:
                         attacker.combat_interval = [current_time, current_time]
-                    try:
-                        target.combat_interval[1] = current_time
-                    except TypeError:
-                        target.combat_interval = [current_time, current_time]
 
                 magnitude = abs(line.magnitude)
                 target.total_damage_taken += magnitude
@@ -381,7 +377,8 @@ class Combat:
 
     def __gt__(self, other):
         if not isinstance(other, Combat):
-            raise TypeError(f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
+            raise TypeError(
+                    f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}")
         if isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
             return self.date_time > other.date_time
         if not isinstance(self.date_time, datetime) and isinstance(self.date_time, datetime):
