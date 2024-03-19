@@ -1,4 +1,6 @@
-__all__ = ['cli', 'combat', 'datamodels', 'detection', 'iofunc', 'main', 'parser', 'utilities']
+__all__ = [
+        'cli', 'combat', 'datamodels', 'detection', 'iofunc', 'liveparser', 'main', 'parser',
+        'utilities']
 
 TABLE_HEADER = (
     'Combat Time', 'DPS', 'Total Damage', 'Debuff', 'Attacks-in Share',
@@ -11,7 +13,7 @@ TREE_HEADER = (
     '', 'DPS', 'Total Damage', 'Debuff', 'Max One Hit', 'Crit Chance', 'Accuracy', 'Flank Rate',
     'Kills', 'Attacks', 'Misses', 'Critical Hits', 'Flank Hits', 'Shield Damage', 'Shield DPS',
     'Hull Damage', 'Hull DPS', 'Base Damage', 'Base DPS', 'Combat Time', 'Hull Attacks',
-    'Shield Attacks')  # , 'Hull Resistance', 'Shield Resistance')
+    'Shield Attacks')  # , 'Shield Resistance')
 
 HEAL_TREE_HEADER = (
     '', 'HPS', 'Total Heal', 'Hull Heal', 'Hull HPS', 'Shield Heal', 'Shield HPS',
@@ -21,3 +23,4 @@ HEAL_TREE_HEADER = (
 from .main import OSCR
 from .datamodels import TreeItem
 from .iofunc import split_log_by_lines, split_log_by_combat
+from .liveparser import LiveParser
