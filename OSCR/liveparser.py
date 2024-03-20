@@ -92,29 +92,35 @@ class LiveParser():
                 player['damage_buffer'] = 0
         output = dict()
         for player, player_data in player_copy.items():
-            combat_time = timestamp - player_data['combat_start']
-            try:
-                dps = player_data['damage'] / combat_time
-            except ZeroDivisionError:
+            if player_data['combat_start'] is not None:
+                combat_time = timestamp - player_data['combat_start']
+                try:
+                    dps = player_data['damage'] / combat_time
+                except ZeroDivisionError:
+                    dps = 0
+                try:
+                    hps = player_data['heal'] / combat_time
+                except ZeroDivisionError:
+                    hps = 0
+            else:
                 dps = 0
-            try:
-                debuff = (player_data['damage_buffer'] / player_data['base_damage_buffer']) - 1
-            except ZeroDivisionError:
-                debuff = 0
-            try:
-                attacks_in_share = player_data['attacks_in_buffer'] / total_attacks_in
-            except ZeroDivisionError:
-                attacks_in_share = 0
-            try:
-                hps = player_data['heal'] / combat_time
-            except ZeroDivisionError:
                 hps = 0
+                try:
+                    debuff = (player_data['damage_buffer'] / player_data['base_damage_buffer']) - 1
+                except ZeroDivisionError:
+                    debuff = 0
+                try:
+                    attacks_in_share = player_data['attacks_in_buffer'] / total_attacks_in
+                except ZeroDivisionError:
+                    attacks_in_share = 0
             output[player] = {
                 'dps': f'{dps:,.2f}',
                 'combat_time': f'{combat_time:.1f}s',
                 'local_debuff': f'{debuff * 100:.2f}%',
                 'local_attacks_in_share': f'{attacks_in_share * 100:.2f}%',
-                'hps': f'{hps:,.2f}'
+                'hps': f'{hps:,.2f}',
+                'kills': str(player_data['kills']),
+                'deaths': str(player_data['deaths'])
             }
         self.update_callback(output)
 
@@ -145,6 +151,7 @@ class LiveParser():
                 is_heal = (
                         (is_shield and magnitude < 0 and magnitude2 >= 0)
                         or attack_data[8] == 'HitPoints')
+                is_kill = 'Kill' in attack_data[9]
                 magnitude = abs(magnitude)
                 magnitude2 = abs(magnitude2)
 
@@ -165,16 +172,23 @@ class LiveParser():
                                 'base_damage_buffer': 0,
                                 'damage_buffer': 0,
                                 'heal': 0,
-                                'attacks_in_buffer': 0
+                                'attacks_in_buffer': 0,
+                                'kills': 0,
+                                'deaths': 0
                             }
                             if not is_heal and attack_data[5] != '*':
                                 self._players[attacker_handle]['combat_start'] = timestamp
+                    if (self._players[attacker_handle]['combat_start'] is None
+                            and not is_heal and attack_data[5] != '*'):
+                        self._players[attacker_handle]['combat_start'] = timestamp
                     if not is_heal:
                         with self._lock:
                             self._current_timestamp = timestamp
                             self._players[attacker_handle]['damage'] += magnitude
                             self._players[attacker_handle]['damage_buffer'] += magnitude
                             self._players[attacker_handle]['base_damage_buffer'] += magnitude2
+                            if is_kill:
+                                self._players[attacker_handle]['kills'] += 1
                     else:
                         with self._lock:
                             self._players[attacker_handle]['heal'] += magnitude
@@ -187,7 +201,11 @@ class LiveParser():
                                 'base_damage_buffer': 0,
                                 'damage_buffer': 0,
                                 'heal': 0,
-                                'attacks_in_buffer': 0
+                                'attacks_in_buffer': 0,
+                                'kills': 0,
+                                'deaths': 0
                             }
                     with self._lock:
                         self._players[target_handle]['attacks_in_buffer'] += 1
+                        if is_kill:
+                            self._players[target_handle]['deaths'] += 1

@@ -21,7 +21,7 @@ HEAL_TREE_HEADER = (
     'Shield Heal Ticks')
 
 LIVE_TABLE_HEADER = (
-    'DPS', 'Combat Time', 'Debuff', 'Attacks-in', 'HPS')
+    'DPS', 'Combat Time', 'Debuff', 'Attacks-in', 'HPS', 'Kills', 'Deaths')
 
 from .main import OSCR
 from .datamodels import TreeItem
