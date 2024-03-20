@@ -105,18 +105,22 @@ class LiveParser():
             else:
                 dps = 0
                 hps = 0
-                try:
-                    debuff = (player_data['damage_buffer'] / player_data['base_damage_buffer']) - 1
-                except ZeroDivisionError:
-                    debuff = 0
-                try:
-                    attacks_in_share = player_data['attacks_in_buffer'] / total_attacks_in
-                except ZeroDivisionError:
-                    attacks_in_share = 0
+            try:
+                debuff = (player_data['damage_buffer'] / player_data['base_damage_buffer']) - 1
+            except ZeroDivisionError:
+                debuff = 0
+            if debuff == 0:
+                debuff = '---.--%'
+            else:
+                debuff = f'{debuff * 100:.2f}%'
+            try:
+                attacks_in_share = player_data['attacks_in_buffer'] / total_attacks_in
+            except ZeroDivisionError:
+                attacks_in_share = 0
             output[player] = {
                 'dps': f'{dps:,.2f}',
                 'combat_time': f'{combat_time:.1f}s',
-                'local_debuff': f'{debuff * 100:.2f}%',
+                'local_debuff': debuff,
                 'local_attacks_in_share': f'{attacks_in_share * 100:.2f}%',
                 'hps': f'{hps:,.2f}',
                 'kills': str(player_data['kills']),
