@@ -58,10 +58,12 @@ class LiveParser():
         """
         Initiates the parsing process.
         """
-        self.start_callback()
-        analyzer_thread = Thread(target=self.analyze, args=())
-        analyzer_thread.start()
-        self._update_timer.start()
+        if not self._active.is_set():
+            self.start_callback()
+            analyzer_thread = Thread(target=self.analyze, args=())
+            analyzer_thread.start()
+            self._update_timer = Timer(interval=1, function=self.update_data)
+            self._update_timer.start()
 
     def stop(self):
         """

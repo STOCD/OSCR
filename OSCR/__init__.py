@@ -20,6 +20,9 @@ HEAL_TREE_HEADER = (
     'Max One Heal', 'Crit Chance', 'Heal Ticks', 'Critical Heals', 'Combat Time', 'Hull Heal Ticks',
     'Shield Heal Ticks')
 
+LIVE_TABLE_HEADER = (
+    'DPS', 'Combat Time', 'Debuff', 'Attacks-in', 'HPS')
+
 from .main import OSCR
 from .datamodels import TreeItem
 from .iofunc import split_log_by_lines, split_log_by_combat
