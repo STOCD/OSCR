@@ -354,10 +354,7 @@ class Combat:
 
     @property
     def duration(self):
-        dur = self.end_time - self.start_time
-        if dur < 0:
-            return 0
-        return dur
+        return self.end_time - self.start_time
 
     @property
     def date_time(self):

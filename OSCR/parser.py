@@ -471,7 +471,7 @@ def merge_single_lines(tree_model: TreeModel):
         new_pet_groups = dict()
 
         for ability_or_petgroup in player._children:
-            if ability_or_petgroup._children[0].child_count == 0:
+            if not ability_or_petgroup._children or ability_or_petgroup._children[0].child_count == 0:
                 continue
 
             for pet in reversed(ability_or_petgroup._children):
