@@ -155,7 +155,7 @@ class LiveParser():
                     time.sleep(0.5)
                     if self._reset:
                         continue
-                    if self._inactive_seconds >= self.settings['seconds_between_combats']:
+                    elif self._inactive_seconds >= self.settings['seconds_between_combats']:
                         self._inactive_seconds = 0
                         self._reset = True
                     else:
@@ -165,6 +165,7 @@ class LiveParser():
                     with self._lock:
                         self._players = dict()
                     self._reset = False
+                self._inactive_seconds = 0
                 time_data, attack_data = line.split('::')
                 timestamp = to_datetime(time_data).timestamp()
                 attack_data = attack_data.split(',')
