@@ -123,15 +123,6 @@ class Combat:
                 if line.owner_id not in self.players:
                     attacker = OverviewTableRow(line.owner_name, get_handle_from_id(line.owner_id))
                     self.players[line.owner_id] = attacker
-                    attacker.DMG_graph_data.extend(numpy.zeros(graph_points, dtype=numpy.int8))
-                    attacker.graph_time.extend(
-                        numpy.linspace(
-                            self.graph_resolution,
-                            graph_points * self.graph_resolution,
-                            graph_points,
-                            dtype=numpy.float32,
-                        )
-                    )
                     attacker.events = []
                 else:
                     attacker = self.players[line.owner_id]
@@ -199,11 +190,13 @@ class Combat:
 
             # update graph
             if line.timestamp - last_graph_time >= graph_timedelta:
-                graph_points += 1
+                current_graph_timedelta = (line.timestamp - last_graph_time).total_seconds()
+                graph_points += current_graph_timedelta // graph_timedelta.total_seconds()
                 for player in self.players.values():
-                    player.DMG_graph_data.append(player.damage_buffer)
-                    player.damage_buffer = 0.0
-                    player.graph_time.append(graph_points * self.graph_resolution)
+                    if player.damage_buffer != 0:
+                        player.DMG_graph_data.append(player.damage_buffer)
+                        player.damage_buffer = 0.0
+                        player.graph_time.append(graph_points * self.graph_resolution)
                 last_graph_time = line.timestamp
 
             if line.event_name not in attacker.events:

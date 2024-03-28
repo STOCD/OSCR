@@ -169,12 +169,14 @@ def get_outgoing_target_row(
 
     if line.source_name:
         pet_group_id = (line.owner_id, line.source_name)
+        attacker_id = (line.owner_id, line.source_id)
         if pet_group_id in tree_model.pet_group_index:
             attacker = tree_model.pet_group_index[pet_group_id]
-        else:
+        # if attacking pet already in pet index: logfile is bugged (one pet has more than one
+        # entity name); pet group is not created in this case as it would not have any children
+        elif attacker_id not in tree_model.pet_index:
             attacker = tree_model.add_pet_group(line.source_name, pet_group_id, attacker)
 
-        attacker_id = (line.owner_id, line.source_id)
         if attacker_id in tree_model.pet_index:
             attacker = tree_model.pet_index[attacker_id]
         else:

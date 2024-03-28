@@ -18,7 +18,7 @@ class LiveParser():
     OSCR's realtime parser
     '''
 
-    def __init__(self, log_path, start_callback=None, update_callback=None):
+    def __init__(self, log_path, start_callback=None, update_callback=None, settings: dict = None):
         '''
         Creates LiveParser Instance.
 
@@ -30,6 +30,9 @@ class LiveParser():
         - :param update_callback: function that is called once every second when the parser is
         running; it will be passed a dictionary with the data acquired in the last second as
         positional argument
+        - :param settings: contains settings
+            - "seconds_between_combats": number of inactive seconds after which a new engagement
+            resets the collected data
         '''
         if not (os.path.exists(log_path) and os.path.isfile(log_path)):
             raise FileNotFoundError('Invalid Logpath')
@@ -37,6 +40,8 @@ class LiveParser():
         self._lock = Lock()
         self._players = dict()
         self._current_timestamp = 0
+        self._inactive_seconds = 0
+        self._reset = False
         if isinstance(start_callback, CALLABLE):
             self.start_callback = start_callback
         else:
@@ -47,6 +52,12 @@ class LiveParser():
             self.update_callback = _f
         self._update_timer = Timer(interval=1, function=self.update_data)
         self.log_path = log_path
+        self.settings = {
+            'seconds_between_combats': 100
+        }
+        for key in self.settings:
+            if key in settings:
+                self.settings[key] = settings[key]
 
     def __del__(self):
         """
@@ -81,6 +92,8 @@ class LiveParser():
             return
         self._update_timer = Timer(interval=1, function=self.update_data)
         self._update_timer.start()
+        if not self._players:
+            return
         total_attacks_in = 0
         with self._lock:
             player_copy = deepcopy(self._players)
@@ -130,7 +143,9 @@ class LiveParser():
         Analyzes the log continuously until LiveParser.stop() is called. Clears existing data first
         when called.
         """
-        self._players = dict()
+        with self._lock:
+            self._players = dict()
+        self._reset = False
         with open(self.log_path, 'r', encoding='utf-8') as logfile:
             logfile.seek(0, 2)
             self._active.set()
@@ -138,7 +153,19 @@ class LiveParser():
                 line = logfile.readline()
                 if not line:
                     time.sleep(0.5)
+                    if self._reset:
+                        continue
+                    elif self._inactive_seconds >= self.settings['seconds_between_combats']:
+                        self._inactive_seconds = 0
+                        self._reset = True
+                    else:
+                        self._inactive_seconds += 0.5
                     continue
+                if self._reset:
+                    with self._lock:
+                        self._players = dict()
+                    self._reset = False
+                self._inactive_seconds = 0
                 time_data, attack_data = line.split('::')
                 timestamp = to_datetime(time_data).timestamp()
                 attack_data = attack_data.split(',')
@@ -158,8 +185,8 @@ class LiveParser():
 
                 # ignore self damage and damage from unknown sources
                 try:
-                    attacker_handle = attack_data[1].split(' ')[1][:-1]
-                    target_handle = attack_data[5].split(' ')[1][:-1]
+                    attacker_handle = attack_data[1].split(' ', 1)[1][:-1]
+                    target_handle = attack_data[5].split(' ', 1)[1][:-1]
                 except IndexError:
                     if not is_heal:
                         continue
