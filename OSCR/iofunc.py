@@ -82,7 +82,7 @@ def split_log_by_lines(
         start_time = format_timestamp(lines[0].split('::')[0])
         end_time = format_timestamp(lines[-1].split('::')[0])
         new_filename = sanitize_file_name(f'[{start_time}--{end_time}]{filename}')
-        new_path = f'{directory_path}\\{new_filename}'
+        new_path = f'{directory_path}/{new_filename}'
         try:
             save_log(new_path, lines)
         except FileExistsError:

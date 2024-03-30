@@ -10,7 +10,7 @@ from .utilities import datetime_to_display, to_datetime
 
 class OSCR():
 
-    version = '2024.03b261'
+    version = '2024.03b300'
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path
@@ -25,7 +25,7 @@ class OSCR():
             'excluded_event_ids': ['Autodesc.Combatevent.Falling'],
             'graph_resolution': 0.2,
             'split_log_after': 480000,
-            'templog_folder_path': f'{os.path.dirname(os.path.abspath(__file__))}\\~temp_log_files'
+            'templog_folder_path': f'{os.path.dirname(os.path.abspath(__file__))}/~temp_log_files'
         }
         if settings is not None:
             self._settings.update(settings)
