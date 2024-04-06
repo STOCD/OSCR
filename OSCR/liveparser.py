@@ -39,7 +39,6 @@ class LiveParser():
         self._active = Event()
         self._lock = Lock()
         self._players = dict()
-        self._current_timestamp = 0
         self._inactive_seconds = 0
         self._reset = False
         if isinstance(start_callback, CALLABLE):
@@ -97,7 +96,6 @@ class LiveParser():
         total_attacks_in = 0
         with self._lock:
             player_copy = deepcopy(self._players)
-            timestamp = self._current_timestamp
             for player in self._players.values():
                 total_attacks_in += player['attacks_in_buffer']
                 player['attacks_in_buffer'] = 0
@@ -106,7 +104,7 @@ class LiveParser():
         output = dict()
         for player, player_data in player_copy.items():
             if player_data['combat_start'] is not None:
-                combat_time = timestamp - player_data['combat_start']
+                combat_time = player_data['combat_end'] - player_data['combat_start']
                 try:
                     dps = player_data['damage'] / combat_time
                 except ZeroDivisionError:
@@ -197,6 +195,7 @@ class LiveParser():
                             self._players[attacker_handle] = {
                                 'damage': 0,
                                 'combat_start': None,
+                                'combat_end': None,
                                 'base_damage_buffer': 0,
                                 'damage_buffer': 0,
                                 'heal': 0,
@@ -206,12 +205,12 @@ class LiveParser():
                             }
                             if not is_heal and attack_data[5] != '*':
                                 self._players[attacker_handle]['combat_start'] = timestamp
-                    if (self._players[attacker_handle]['combat_start'] is None
-                            and not is_heal and attack_data[5] != '*'):
-                        self._players[attacker_handle]['combat_start'] = timestamp
+                    if not is_heal and attack_data[5] != '*':
+                        if self._players[attacker_handle]['combat_start'] is None:
+                            self._players[attacker_handle]['combat_start'] = timestamp
+                        self._players[attacker_handle]['combat_end'] = timestamp
                     if not is_heal:
                         with self._lock:
-                            self._current_timestamp = timestamp
                             self._players[attacker_handle]['damage'] += magnitude
                             self._players[attacker_handle]['damage_buffer'] += magnitude
                             self._players[attacker_handle]['base_damage_buffer'] += magnitude2
