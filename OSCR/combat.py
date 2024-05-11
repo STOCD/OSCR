@@ -268,7 +268,7 @@ class Combat:
                     if k in event:
                         player.build = v
                         break
-                if player.build:
+                if player.build != "Unknown":
                     break
 
             player.graph_time = tuple(map(lambda x: round(x, 1), player.graph_time))
