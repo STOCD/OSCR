@@ -268,6 +268,8 @@ class Combat:
                     if k in event:
                         player.build = v
                         break
+                if player.build != "Unknown":
+                    break
 
             player.graph_time = tuple(map(lambda x: round(x, 1), player.graph_time))
             DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
