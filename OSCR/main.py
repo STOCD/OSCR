@@ -116,7 +116,7 @@ class OSCR():
                 if len(current_combat.log_data) >= 20:
                     current_combat.start_time = last_log_time
                     self.combats.append(current_combat)
-                    current_combat = Combat()
+                current_combat = Combat()
                 if len(self.combats) >= total_combats:
                     self.excess_log_lines = log_lines[line_num:]
                     return

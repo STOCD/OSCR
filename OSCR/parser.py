@@ -81,24 +81,13 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
                     actor_combat_durations[line.owner_id][1] = timestamp
                 except KeyError:
                     actor_combat_durations[line.owner_id] = [timestamp, timestamp]
-                try:
-                    actor_combat_durations[line.source_id][1] = timestamp
-                except KeyError:
-                    actor_combat_durations[line.source_id] = [timestamp, timestamp]
+                if not line.source_id.startswith('P'):
+                    try:
+                        actor_combat_durations[line.source_id][1] = timestamp
+                    except KeyError:
+                        actor_combat_durations[line.source_id] = [timestamp, timestamp]
 
             # get table data
-            if miss_flag:
-                ability_target.misses += 1
-                source_ability.misses += 1
-            if kill_flag:
-                ability_target.kills += 1
-                source_ability.kills += 1
-            if flank_flag:
-                ability_target.flank_num += 1
-                source_ability.flank_num += 1
-            if crit_flag:
-                ability_target.crit_num += 1
-                source_ability.crit_num += 1
 
             magnitude = abs(line.magnitude)
             magnitude2 = abs(line.magnitude2)
@@ -129,6 +118,22 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
 
             target_item.graph_data[relative_combat_sec] += magnitude
             source_item.graph_data[relative_combat_sec] += magnitude
+
+            if miss_flag:
+                ability_target.misses += 1
+                source_ability.misses += 1
+            if flank_flag:
+                ability_target.flank_num += 1
+                source_ability.flank_num += 1
+            if crit_flag:
+                ability_target.crit_num += 1
+                source_ability.crit_num += 1
+            if kill_flag:
+                ability_target.kills += 1
+                source_ability.kills += 1
+                if (combat.map == 'Hive Space'
+                        and ability_target.handle == 'Mission_Space_Borg_Queen_Diamond'):
+                    break  # ignore all lines after the Queen kill line in the Hive Space queue
 
     for actor_id, (start_time, end_time) in actor_combat_durations.items():
         actor_combat_durations[actor_id] = round((end_time - start_time).total_seconds(), 1)
@@ -473,7 +478,8 @@ def merge_single_lines(tree_model: TreeModel):
         new_pet_groups = dict()
 
         for ability_or_petgroup in player._children:
-            if not ability_or_petgroup._children or ability_or_petgroup._children[0].child_count == 0:
+            if (len(ability_or_petgroup._children) < 1
+                    or ability_or_petgroup._children[0].child_count == 0):
                 continue
 
             for pet in reversed(ability_or_petgroup._children):
