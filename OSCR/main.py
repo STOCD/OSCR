@@ -10,7 +10,7 @@ from .utilities import datetime_to_display, to_datetime
 
 class OSCR():
 
-    version = '2024.04b020'
+    version = '2024.05b120'
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path
