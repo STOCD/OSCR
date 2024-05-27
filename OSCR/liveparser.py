@@ -183,8 +183,8 @@ class LiveParser():
 
                 # ignore self damage and damage from unknown sources
                 try:
-                    attacker_handle = attack_data[1].split(' ', 1)[1][:-1]
-                    target_handle = attack_data[5].split(' ', 1)[1][:-1]
+                    attacker_handle = attack_data[1].split('@', 2)[-1][:-1]
+                    target_handle = attack_data[5].split('@', 2)[-1][:-1]
                 except IndexError:
                     if not is_heal:
                         continue
