@@ -10,7 +10,7 @@ from .utilities import datetime_to_display, to_datetime
 
 class OSCR():
 
-    version = '2024.05b170'
+    version = '2024.06b290'
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path
@@ -121,6 +121,14 @@ class OSCR():
                     self.excess_log_lines = log_lines[line_num:]
                     return
             splitted_line = attack_data.split(',')
+            # replace self damage asterisk with respective id
+            if splitted_line[5] == '*':
+                if splitted_line[2] == '':
+                    splitted_line[5] = splitted_line[1]
+                    splitted_line[4] = splitted_line[0]
+                else:
+                    splitted_line[5] = splitted_line[3]
+                    splitted_line[4] = splitted_line[2]
             current_line = LogLine(
                     log_time,
                     *splitted_line[:10],

@@ -132,7 +132,8 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
                 ability_target.kills += 1
                 source_ability.kills += 1
                 if (combat.map == 'Hive Space'
-                        and ability_target.handle == 'Mission_Space_Borg_Queen_Diamond'):
+                        and ability_target.name == 'Borg Queen Octahedron'):
+                    combat_duration_delta = line.timestamp - combat.log_data[0].timestamp
                     break  # ignore all lines after the Queen kill line in the Hive Space queue
 
     for actor_id, (start_time, end_time) in actor_combat_durations.items():
