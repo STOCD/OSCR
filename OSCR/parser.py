@@ -1,7 +1,9 @@
+from datetime import timedelta
 import numpy
 
 from . import TREE_HEADER, HEAL_TREE_HEADER
-from .datamodels import AnalysisTableRow, DamageTableRow, HealTableRow, LogLine, TreeItem, TreeModel
+from .datamodels import (
+    AnalysisTableRow, DamageTableRow, HealTableRow, LogLine, OverviewTableRow, TreeItem, TreeModel)
 from .combat import Combat
 from .utilities import bundle, get_handle_from_id
 
@@ -15,9 +17,14 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
     heal_out_model = TreeModel(HEAL_TREE_HEADER)
     heal_in_model = TreeModel(HEAL_TREE_HEADER)
     actor_combat_durations = dict()
+    graph_timedelta = timedelta(seconds=combat.graph_resolution)
+    graph_points = 0
+    combat.players = {}
+    combat.critters = {}
+    combat.critter_meta = {}
     combat_duration_delta = combat.log_data[-1].timestamp - combat.log_data[0].timestamp
     combat_duration_sec = int(combat_duration_delta.total_seconds()) + 1  # round up to full second
-    combat_start = combat.log_data[0].timestamp
+    combat_start = last_graph_time = combat.log_data[0].timestamp
     relative_combat_sec = 0
     for line in combat.log_data:
 
@@ -32,6 +39,32 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
 
         relative_combat_sec = (timestamp - combat_start).seconds
 
+        if player_attacks:
+            if line.owner_id not in combat.players:
+                attacker = OverviewTableRow(line.owner_name, get_handle_from_id(line.owner_id))
+                combat.players[line.owner_id] = attacker
+            else:
+                attacker = combat.players[line.owner_id]
+        else:
+            if line.owner_id not in combat.critters:
+                combat.critters[line.owner_id] = OverviewTableRow(
+                    line.owner_name, get_handle_from_id(line.owner_id)
+                )
+            attacker = combat.critters[line.owner_id]
+
+        if player_attacked:
+            if line.target_id not in combat.players:
+                combat.players[line.target_id] = OverviewTableRow(
+                    line.target_name, get_handle_from_id(line.target_id)
+                )
+            target = combat.players[line.target_id]
+        else:
+            if line.target_id not in combat.critters:
+                combat.critters[line.target_id] = OverviewTableRow(
+                    line.target_name, get_handle_from_id(line.target_id)
+                )
+            target = combat.critters[line.target_id]
+
         # HEALS
         if is_heal:
             target_item, ability_target = get_outgoing_target_row(
@@ -42,12 +75,15 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             if crit_flag:
                 ability_target.critical_heals += 1
                 source_ability.critical_heals += 1
+                attacker.heal_crit_num += 1
 
             magnitude = abs(line.magnitude)
             ability_target.total_heal += magnitude
             ability_target.heal_ticks += 1
             source_ability.total_heal += magnitude
             source_ability.heal_ticks += 1
+            attacker.total_heals += magnitude
+            attacker.heal_num += 1
             if is_shield_line:
                 ability_target.shield_heal += magnitude
                 ability_target.shield_heal_ticks += 1
@@ -78,6 +114,10 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             # Heals, damage taken and self-damage don't affect combat time
             if ability_target.name != '*':
                 try:
+                    attacker.combat_interval[1] = timestamp.timestamp()
+                except TypeError:
+                    attacker.combat_interval = [timestamp.timestamp(), timestamp.timestamp()]
+                try:
                     actor_combat_durations[line.owner_id][1] = timestamp
                 except KeyError:
                     actor_combat_durations[line.owner_id] = [timestamp, timestamp]
@@ -88,7 +128,6 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
                         actor_combat_durations[line.source_id] = [timestamp, timestamp]
 
             # get table data
-
             magnitude = abs(line.magnitude)
             magnitude2 = abs(line.magnitude2)
             ability_target.total_damage += magnitude
@@ -97,42 +136,71 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             source_ability.total_damage += magnitude
             source_ability.total_base_damage += magnitude2
             source_ability.total_attacks += 1
+            target.total_damage_taken += magnitude
+            target.attacks_in_num += 1
+            attacker.total_attacks += 1
+            attacker.total_damage += magnitude
+            attacker.damage_buffer += magnitude
             if is_shield_line:
                 ability_target.total_shield_damage += magnitude
                 ability_target.shield_attacks += 1
                 source_ability.total_shield_damage += magnitude
                 source_ability.shield_attacks += 1
+                target.total_shield_damage_taken += magnitude
             else:
                 ability_target.total_hull_damage += magnitude
                 source_ability.total_hull_damage += magnitude
                 if not miss_flag and magnitude != 0 and magnitude2 != 0:
                     ability_target.resistance_sum += magnitude / magnitude2
                     source_ability.resistance_sum += magnitude / magnitude2
+                    attacker.resistance_sum += line.magnitude / line.magnitude2
+                    attacker.hull_attacks += 1
                 ability_target.hull_attacks += 1
                 source_ability.hull_attacks += 1
+                target.total_hull_damage_taken += magnitude
 
             if magnitude > ability_target.max_one_hit:
                 ability_target.max_one_hit = magnitude
             if magnitude > source_ability.max_one_hit:
                 source_ability.max_one_hit = magnitude
+            if magnitude > attacker.max_one_hit:
+                attacker.max_one_hit = magnitude
 
             target_item.graph_data[relative_combat_sec] += magnitude
             source_item.graph_data[relative_combat_sec] += magnitude
 
+            # update overview graph
+            if timestamp - last_graph_time >= graph_timedelta:
+                current_graph_timedelta = (timestamp - last_graph_time).total_seconds()
+                graph_points += current_graph_timedelta // graph_timedelta.total_seconds()
+                for player in combat.players.values():
+                    if player.damage_buffer != 0:
+                        player.DMG_graph_data.append(player.damage_buffer)
+                        player.damage_buffer = 0.0
+                        player.graph_time.append(graph_points * combat.graph_resolution)
+                last_graph_time = timestamp
+
+            if line.event_name not in attacker.events:
+                attacker.events.append(line.event_name)
+
             if miss_flag:
                 ability_target.misses += 1
                 source_ability.misses += 1
+                attacker.misses += 1
             if flank_flag:
                 ability_target.flank_num += 1
                 source_ability.flank_num += 1
             if crit_flag:
                 ability_target.crit_num += 1
                 source_ability.crit_num += 1
+                attacker.crit_num += 1
             if kill_flag:
                 ability_target.kills += 1
                 source_ability.kills += 1
-                if (combat.map == 'Hive Space'
-                        and ability_target.name == 'Borg Queen Octahedron'):
+                target.deaths += 1
+                if ((combat.map == 'Hive Space' and ability_target.name == 'Borg Queen Octahedron')
+                        or (ability_target.name == '*'
+                            and line.owner_name == 'Borg Queen Octahedron')):
                     combat_duration_delta = line.timestamp - combat.log_data[0].timestamp
                     break  # ignore all lines after the Queen kill line in the Hive Space queue
 
@@ -145,6 +213,8 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
     complete_damage_tree(dmg_in_model, actor_combat_durations, combat_duration)
     complete_heal_tree(heal_out_model, actor_combat_durations, combat_duration)
     complete_heal_tree(heal_in_model, actor_combat_durations, combat_duration)
+    combat.analyze_players()
+    combat.analyze_critters()
     return dmg_out_model, dmg_in_model, heal_out_model, heal_in_model
 
 
@@ -317,7 +387,7 @@ def get_flags(flag_str: str) -> tuple[bool]:
     miss = 'Miss' in flag_str
     flank = 'Flank' in flag_str
     kill = 'Kill' in flag_str
-    shield_break = 'ShieldBreak' in flag_str
+    shield_break = None  # 'ShieldBreak' in flag_str
     return (critical_hit, miss, flank, kill, shield_break)
 
 

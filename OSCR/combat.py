@@ -61,7 +61,7 @@ class Combat:
     results.
     """
 
-    def __init__(self):
+    def __init__(self, graph_resolution=0.2):
         self.log_data = deque()
         self.map = None
         self.difficulty = None
@@ -70,6 +70,7 @@ class Combat:
         self.players = {}
         self.critters = {}
         self.critter_meta = {}
+        self.graph_resolution = graph_resolution
 
     def analyze_last_line(self):
         """Analyze the last line and try and detect the map and difficulty"""

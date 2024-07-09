@@ -10,7 +10,7 @@ from .utilities import datetime_to_display, to_datetime
 
 class OSCR():
 
-    version = '2024.06b290'
+    version = '2024.07b090'
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path
@@ -107,7 +107,7 @@ class OSCR():
 
         combat_delta = timedelta(seconds=self._settings['seconds_between_combats'])
         last_log_time = to_datetime(log_lines[0].split('::')[0]) + 2 * combat_delta
-        current_combat = Combat()
+        current_combat = Combat(self._settings['graph_resolution'])
 
         for line_num, line in enumerate(log_lines):
             time_data, attack_data = line.split('::')
@@ -116,19 +116,11 @@ class OSCR():
                 if len(current_combat.log_data) >= 20:
                     current_combat.start_time = last_log_time
                     self.combats.append(current_combat)
-                current_combat = Combat()
+                current_combat = Combat(self._settings['graph_resolution'])
                 if len(self.combats) >= total_combats:
                     self.excess_log_lines = log_lines[line_num:]
                     return
             splitted_line = attack_data.split(',')
-            # replace self damage asterisk with respective id
-            if splitted_line[5] == '*':
-                if splitted_line[2] == '':
-                    splitted_line[5] = splitted_line[1]
-                    splitted_line[4] = splitted_line[0]
-                else:
-                    splitted_line[5] = splitted_line[3]
-                    splitted_line[4] = splitted_line[2]
             current_line = LogLine(
                     log_time,
                     *splitted_line[:10],
@@ -190,24 +182,24 @@ class OSCR():
                     log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer])
             return True
 
-    def shallow_combat_analysis(self, combat_num: int) -> tuple[list, ...]:
-        '''
-        Analyzes combat from currently available combats in self.combat.
+    # def shallow_combat_analysis(self, combat_num: int) -> tuple[list, ...]:
+    #     '''
+    #     Analyzes combat from currently available combats in self.combat.
 
-        Parameters:
-        - :param combat_num: index of the combat in self.combats
+    #     Parameters:
+    #     - :param combat_num: index of the combat in self.combats
 
-        :return: tuple containing the overview table, DPS graph data and DMG graph data
-        '''
-        try:
-            combat = self.combats[combat_num]
-            combat.analyze_shallow(graph_resolution=self._settings['graph_resolution'])
-            self.combats_pointer = combat_num
-        except IndexError:
-            raise AttributeError(
-                    f'Combat #{combat_num} you are trying to analyze has not been isolated yet. '
-                    f'Number of isolated combats: {len(self.combats)} -- Use '
-                    'OSCR.analyze_log_file() with appropriate arguments first.')
+    #     :return: tuple containing the overview table, DPS graph data and DMG graph data
+    #     '''
+    #     try:
+    #         combat = self.combats[combat_num]
+    #         combat.analyze_shallow(graph_resolution=self._settings['graph_resolution'])
+    #         self.combats_pointer = combat_num
+    #     except IndexError:
+    #         raise AttributeError(
+    #                 f'Combat #{combat_num} you are trying to analyze has not been isolated yet. '
+    #                 f'Number of isolated combats: {len(self.combats)} -- Use '
+    #                 'OSCR.analyze_log_file() with appropriate arguments first.')
 
     def full_combat_analysis(self, combat_num: int) -> tuple[TreeItem]:
         '''
@@ -215,6 +207,7 @@ class OSCR():
         '''
         try:
             combat = self.combats[combat_num]
+            self.combats_pointer = combat_num
         except IndexError:
             raise AttributeError(
                     f'Combat #{combat_num} you are trying to analyze has not been isolated yet.'
