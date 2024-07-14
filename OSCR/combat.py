@@ -61,7 +61,7 @@ class Combat:
     results.
     """
 
-    def __init__(self):
+    def __init__(self, graph_resolution=0.2):
         self.log_data = deque()
         self.map = None
         self.difficulty = None
@@ -70,6 +70,7 @@ class Combat:
         self.players = {}
         self.critters = {}
         self.critter_meta = {}
+        self.graph_resolution = graph_resolution
 
     def analyze_last_line(self):
         """Analyze the last line and try and detect the map and difficulty"""
@@ -149,8 +150,6 @@ class Combat:
             # get table data
             if miss_flag:
                 attacker.misses += 1
-            if kill_flag:
-                target.deaths += 1
 
             if (
                 line.type == "Shield" and line.magnitude < 0 and line.magnitude2 >= 0
@@ -187,6 +186,11 @@ class Combat:
                     if line.magnitude != 0 and line.magnitude2 != 0:
                         attacker.resistance_sum += line.magnitude / line.magnitude2
                         attacker.hull_attacks += 1
+                if kill_flag:
+                    target.deaths += 1
+                    if (self.map == 'Hive Space'
+                            and line.target_name == 'Borg Queen Octahedron'):
+                        break
 
             # update graph
             if line.timestamp - last_graph_time >= graph_timedelta:
@@ -268,8 +272,6 @@ class Combat:
                     if k in event:
                         player.build = v
                         break
-                if player.build != "Unknown":
-                    break
 
             player.graph_time = tuple(map(lambda x: round(x, 1), player.graph_time))
             DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
