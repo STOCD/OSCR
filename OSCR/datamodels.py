@@ -56,7 +56,7 @@ class OverviewTableRow:
         self.crit_num: int = 0
         self.misses: int = 0
 
-        self.resistance_sum: float = 0.0
+        self.base_damage: float = 0.0
         self.DMG_graph_data: list[float] = list()
         self.DPS_graph_data: list[float] = list()
         self.graph_time: list[float] = list()
@@ -185,7 +185,6 @@ class DamageTableRow(AnalysisTableRow):
         self.shield_attacks: int = 0
 
         self.id: str = id
-        self.resistance_sum: float = 0.0
         self.combat_start: float = None
         self.combat_end: float = None
 

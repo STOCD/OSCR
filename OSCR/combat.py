@@ -100,111 +100,112 @@ class Combat:
         self.analyze_players()
         self.analyze_critters()
 
-    def analyze_log_data(self):
-        """ """
+    # DEPRECATED
+    # def analyze_log_data(self):
+    #     """ """
 
-        graph_timedelta = timedelta(seconds=self.graph_resolution)
-        graph_points = 0
-        last_graph_time = self.log_data[0].timestamp
+    #     graph_timedelta = timedelta(seconds=self.graph_resolution)
+    #     graph_points = 0
+    #     last_graph_time = self.log_data[0].timestamp
 
-        self.players = {}
-        self.critters = {}
-        self.critter_meta = {}
+    #     self.players = {}
+    #     self.critters = {}
+    #     self.critter_meta = {}
 
-        for line in self.log_data:
-            # manage entites
-            player_attacks = line.owner_id.startswith("P")
-            player_attacked = line.target_id.startswith("P")
-            if not player_attacks and not player_attacked:
-                continue
-            attacker = None
-            target = None
-            crit_flag, miss_flag, kill_flag = get_flags(line.flags)
-            if player_attacks:
-                if line.owner_id not in self.players:
-                    attacker = OverviewTableRow(line.owner_name, get_handle_from_id(line.owner_id))
-                    self.players[line.owner_id] = attacker
-                    attacker.events = []
-                else:
-                    attacker = self.players[line.owner_id]
-            else:
-                if line.owner_id not in self.critters:
-                    self.critters[line.owner_id] = OverviewTableRow(
-                        line.owner_name, get_handle_from_id(line.owner_id)
-                    )
-                attacker = self.critters[line.owner_id]
+    #     for line in self.log_data:
+    #         # manage entites
+    #         player_attacks = line.owner_id.startswith("P")
+    #         player_attacked = line.target_id.startswith("P")
+    #         if not player_attacks and not player_attacked:
+    #             continue
+    #         attacker = None
+    #         target = None
+    #         crit_flag, miss_flag, kill_flag = get_flags(line.flags)
+    #         if player_attacks:
+    #             if line.owner_id not in self.players:
+    #                 attacker = OverviewTableRow(line.owner_name,get_handle_from_id(line.owner_id))
+    #                 self.players[line.owner_id] = attacker
+    #                 attacker.events = []
+    #             else:
+    #                 attacker = self.players[line.owner_id]
+    #         else:
+    #             if line.owner_id not in self.critters:
+    #                 self.critters[line.owner_id] = OverviewTableRow(
+    #                     line.owner_name, get_handle_from_id(line.owner_id)
+    #                 )
+    #             attacker = self.critters[line.owner_id]
 
-            if player_attacked:
-                if line.target_id not in self.players:
-                    self.players[line.target_id] = OverviewTableRow(
-                        line.target_name, get_handle_from_id(line.target_id)
-                    )
-                target = self.players[line.target_id]
-            else:
-                if line.target_id not in self.critters:
-                    self.critters[line.target_id] = OverviewTableRow(
-                        line.target_name, get_handle_from_id(line.target_id)
-                    )
-                target = self.critters[line.target_id]
+    #         if player_attacked:
+    #             if line.target_id not in self.players:
+    #                 self.players[line.target_id] = OverviewTableRow(
+    #                     line.target_name, get_handle_from_id(line.target_id)
+    #                 )
+    #             target = self.players[line.target_id]
+    #         else:
+    #             if line.target_id not in self.critters:
+    #                 self.critters[line.target_id] = OverviewTableRow(
+    #                     line.target_name, get_handle_from_id(line.target_id)
+    #                 )
+    #             target = self.critters[line.target_id]
 
-            # get table data
-            if miss_flag:
-                attacker.misses += 1
+    #         # get table data
+    #         if miss_flag:
+    #             attacker.misses += 1
 
-            if (
-                line.type == "Shield" and line.magnitude < 0 and line.magnitude2 >= 0
-            ) or line.type == "HitPoints":
-                attacker.total_heals += abs(line.magnitude)
-                attacker.heal_num += 1
-                if crit_flag:
-                    attacker.heal_crit_num += 1
-            else:
-                # Combat Duration
-                # Heals, damage taken and self-damage don't affect combat time
-                if line.target_id != '*':
-                    current_time = line.timestamp.timestamp()
-                    try:
-                        attacker.combat_interval[1] = current_time
-                    except TypeError:
-                        attacker.combat_interval = [current_time, current_time]
+    #         if (
+    #             line.type == "Shield" and line.magnitude < 0 and line.magnitude2 >= 0
+    #         ) or line.type == "HitPoints":
+    #             attacker.total_heals += abs(line.magnitude)
+    #             attacker.heal_num += 1
+    #             if crit_flag:
+    #                 attacker.heal_crit_num += 1
+    #         else:
+    #             # Combat Duration
+    #             # Heals, damage taken and self-damage don't affect combat time
+    #             if line.target_id != '*':
+    #                 current_time = line.timestamp.timestamp()
+    #                 try:
+    #                     attacker.combat_interval[1] = current_time
+    #                 except TypeError:
+    #                     attacker.combat_interval = [current_time, current_time]
 
-                magnitude = abs(line.magnitude)
-                target.total_damage_taken += magnitude
-                if line.type == "Shield":
-                    target.total_shield_damage_taken += magnitude
-                else:
-                    target.total_hull_damage_taken += magnitude
-                target.attacks_in_num += 1
-                attacker.total_attacks += 1
-                attacker.total_damage += magnitude
-                attacker.damage_buffer += magnitude
-                if crit_flag:
-                    attacker.crit_num += 1
-                if magnitude > attacker.max_one_hit:
-                    attacker.max_one_hit = magnitude
-                if not line.type == "Shield" and not miss_flag:
-                    if line.magnitude != 0 and line.magnitude2 != 0:
-                        attacker.resistance_sum += line.magnitude / line.magnitude2
-                        attacker.hull_attacks += 1
-                if kill_flag:
-                    target.deaths += 1
-                    if (self.map == 'Hive Space'
-                            and line.target_name == 'Borg Queen Octahedron'):
-                        break
+    #             magnitude = abs(line.magnitude)
+    #             target.total_damage_taken += magnitude
+    #             if line.type == "Shield":
+    #                 target.total_shield_damage_taken += magnitude
+    #             else:
+    #                 target.total_hull_damage_taken += magnitude
+    #             target.attacks_in_num += 1
+    #             attacker.total_attacks += 1
+    #             attacker.total_damage += magnitude
+    #             attacker.damage_buffer += magnitude
+    #             if crit_flag:
+    #                 attacker.crit_num += 1
+    #             if magnitude > attacker.max_one_hit:
+    #                 attacker.max_one_hit = magnitude
+    #             if not line.type == "Shield" and not miss_flag:
+    #                 if line.magnitude != 0 and line.magnitude2 != 0:
+    #                     attacker.resistance_sum += line.magnitude / line.magnitude2
+    #                     attacker.hull_attacks += 1
+    #             if kill_flag:
+    #                 target.deaths += 1
+    #                 if (self.map == 'Hive Space'
+    #                         and line.target_name == 'Borg Queen Octahedron'):
+    #                     break
 
-            # update graph
-            if line.timestamp - last_graph_time >= graph_timedelta:
-                current_graph_timedelta = (line.timestamp - last_graph_time).total_seconds()
-                graph_points += current_graph_timedelta // graph_timedelta.total_seconds()
-                for player in self.players.values():
-                    if player.damage_buffer != 0:
-                        player.DMG_graph_data.append(player.damage_buffer)
-                        player.damage_buffer = 0.0
-                        player.graph_time.append(graph_points * self.graph_resolution)
-                last_graph_time = line.timestamp
+    #         # update graph
+    #         if line.timestamp - last_graph_time >= graph_timedelta:
+    #             current_graph_timedelta = (line.timestamp - last_graph_time).total_seconds()
+    #             graph_points += current_graph_timedelta // graph_timedelta.total_seconds()
+    #             for player in self.players.values():
+    #                 if player.damage_buffer != 0:
+    #                     player.DMG_graph_data.append(player.damage_buffer)
+    #                     player.damage_buffer = 0.0
+    #                     player.graph_time.append(graph_points * self.graph_resolution)
+    #             last_graph_time = line.timestamp
 
-            if line.event_name not in attacker.events:
-                attacker.events.append(line.event_name)
+    #         if line.event_name not in attacker.events:
+    #             attacker.events.append(line.event_name)
 
     def analyze_players(self):
         """
@@ -234,7 +235,7 @@ class Combat:
             successful_attacks = player.hull_attacks - player.misses
 
             try:
-                player.debuff = player.resistance_sum / successful_attacks * 100
+                player.debuff = (player.total_damage / player.base_damage - 1) * 100
             except ZeroDivisionError:
                 player.debuff = 0.0
             try:
