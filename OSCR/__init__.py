@@ -25,5 +25,5 @@ LIVE_TABLE_HEADER = (
 
 from .main import OSCR
 from .datamodels import TreeItem
-from .iofunc import split_log_by_lines, split_log_by_combat
+from .iofunc import split_log_by_lines, split_log_by_combat, repair_logfile
 from .liveparser import LiveParser

@@ -140,6 +140,7 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             target.attacks_in_num += 1
             attacker.total_attacks += 1
             attacker.total_damage += magnitude
+            attacker.base_damage += magnitude2
             attacker.damage_buffer += magnitude
             if is_shield_line:
                 ability_target.total_shield_damage += magnitude
@@ -150,11 +151,7 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
             else:
                 ability_target.total_hull_damage += magnitude
                 source_ability.total_hull_damage += magnitude
-                if not miss_flag and magnitude != 0 and magnitude2 != 0:
-                    ability_target.resistance_sum += magnitude / magnitude2
-                    source_ability.resistance_sum += magnitude / magnitude2
-                    attacker.resistance_sum += line.magnitude / line.magnitude2
-                    attacker.hull_attacks += 1
+                attacker.hull_attacks += 1
                 ability_target.hull_attacks += 1
                 source_ability.hull_attacks += 1
                 target.total_hull_damage_taken += magnitude
@@ -418,7 +415,7 @@ def calculate_damage_row_stats(raw_row_data: DamageTableRow, combat_time: float)
         hull_dps = 0.0
         base_dps = 0.0
     try:
-        debuff = (raw_row_data.resistance_sum / successful_attacks) - 1
+        debuff = (total_damage / total_base_damage) - 1
     except ZeroDivisionError:
         debuff = 0.0
     try:
@@ -487,14 +484,20 @@ def combine_children_damage_stats(item: TreeItem) -> tuple:
             else:
                 combined_data = [(item.data.name, item.data.handle)]
             continue
-        if index in (3, 5, 6, 7):
+        if index in {5, 6, 7}:
             combined_data.append(sum(column) / len(column))
+        elif index == 3:
+            combined_data.append(0)
         elif index == 4:
             combined_data.append(max(column))
         elif index == 19:
             combined_data.append(column[0])
         else:
             combined_data.append(sum(column))
+    try:
+        combined_data[3] = (combined_data[2] / combined_data[17]) - 1
+    except ZeroDivisionError:
+        combined_data[3] = 0.0
     item.data = tuple(combined_data)
 
 
