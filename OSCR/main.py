@@ -10,7 +10,7 @@ from .utilities import datetime_to_display, to_datetime
 
 class OSCR():
 
-    version = '2024.08b210'
+    version = '2024.09b020'
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path
@@ -38,7 +38,7 @@ class OSCR():
         res = list()
         for c in self.combats:
             if c.difficulty:
-                res.append(f'{c.map} {c.difficulty} {datetime_to_display(c.start_time)}')
+                res.append(f'{c.map} ({c.difficulty} Difficulty) at {datetime_to_display(c.start_time)}')
             else:
                 res.append(f'{c.map} {datetime_to_display(c.start_time)}')
         return res
@@ -115,6 +115,7 @@ class OSCR():
             if last_log_time - log_time > combat_delta:
                 if len(current_combat.log_data) >= 20:
                     current_combat.start_time = last_log_time
+                    analyze_combat(current_combat, self._settings)
                     self.combats.append(current_combat)
                 current_combat = Combat(self._settings['graph_resolution'])
                 if len(self.combats) >= total_combats:
@@ -134,6 +135,7 @@ class OSCR():
                 current_combat.end_time = last_log_time
 
         current_combat.start_time = last_log_time
+        analyze_combat(current_combat, self._settings)
         self.combats.append(current_combat)
 
     def analyze_massive_log_file(self, total_combats=None):
