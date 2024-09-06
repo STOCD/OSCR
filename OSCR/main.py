@@ -10,7 +10,7 @@ from .utilities import datetime_to_display, to_datetime
 
 class OSCR():
 
-    version = '2024.07b090'
+    version = '2024.09b020'
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path
@@ -38,7 +38,7 @@ class OSCR():
         res = list()
         for c in self.combats:
             if c.difficulty:
-                res.append(f'{c.map} {c.difficulty} {datetime_to_display(c.start_time)}')
+                res.append(f'{c.map} ({c.difficulty} Difficulty) at {datetime_to_display(c.start_time)}')
             else:
                 res.append(f'{c.map} {datetime_to_display(c.start_time)}')
         return res
@@ -105,38 +105,52 @@ class OSCR():
             self.combats = list()
             self.excess_log_lines = list()
 
+        # Remove blank lines from beginning of the log.
+        while True:
+            if log_lines[0] == "\n":
+                log_lines = log_lines[1:]
+            else:
+                break
+
         combat_delta = timedelta(seconds=self._settings['seconds_between_combats'])
         last_log_time = to_datetime(log_lines[0].split('::')[0]) + 2 * combat_delta
         current_combat = Combat(self._settings['graph_resolution'])
 
         try:
-            for line_num, line in enumerate(log_lines):
-                time_data, attack_data = line.split('::')
-                log_time = to_datetime(time_data)
-                if last_log_time - log_time > combat_delta:
-                    if len(current_combat.log_data) >= 20:
-                        current_combat.start_time = last_log_time
-                        self.combats.append(current_combat)
-                    current_combat = Combat(self._settings['graph_resolution'])
-                    if len(self.combats) >= total_combats:
-                        self.excess_log_lines = log_lines[line_num:]
-                        return
-                splitted_line = attack_data.split(',')
-                current_line = LogLine(
-                        log_time,
-                        *splitted_line[:10],
-                        float(splitted_line[10]),
-                        float(splitted_line[11]),
-                )
-                last_log_time = log_time
-                current_combat.log_data.appendleft(current_line)
-                current_combat.analyze_last_line()
-                if not current_combat.end_time:
-                    current_combat.end_time = last_log_time
+          for line_num, line in enumerate(log_lines):
+
+              # Some Old logs from SCM have blank lines. Skip them.
+              if line == "\n":
+                  continue
+
+              time_data, attack_data = line.split('::')
+              log_time = to_datetime(time_data)
+              if last_log_time - log_time > combat_delta:
+                  if len(current_combat.log_data) >= 20:
+                      current_combat.start_time = last_log_time
+                      analyze_combat(current_combat, self._settings)
+                      self.combats.append(current_combat)
+                  current_combat = Combat(self._settings['graph_resolution'])
+                  if len(self.combats) >= total_combats:
+                      self.excess_log_lines = log_lines[line_num:]
+                      return
+              splitted_line = attack_data.split(',')
+              current_line = LogLine(
+                      log_time,
+                      *splitted_line[:10],
+                      float(splitted_line[10]),
+                      float(splitted_line[11]),
+              )
+              last_log_time = log_time
+              current_combat.log_data.appendleft(current_line)
+              current_combat.analyze_last_line()
+              if not current_combat.end_time:
+                  current_combat.end_time = last_log_time
         except Exception as ex:
             raise Exception(f"Failed to read log with line: {line_num} \n\n{line}")
 
         current_combat.start_time = last_log_time
+        analyze_combat(current_combat, self._settings)
         self.combats.append(current_combat)
 
     def analyze_massive_log_file(self, total_combats=None):

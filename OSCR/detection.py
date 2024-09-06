@@ -9,87 +9,87 @@ class Detection:
     MAP_IDENTIFIERS_EXISTENCE = {
         "Space_Borg_Battleship_Raidisode_Sibrian_Elite_Initial": {
             "map": "Infected Space",
-            "difficulty": "Elite",
+            "difficulty": "Any",
         },
         "Space_Borg_Dreadnought_Raidisode_Sibrian_Final_Boss": {
             "map": "Infected Space",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Space_Romulan_Colony_Flagship_Lleiset": {
             "map": "Azure Nebula Rescue",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Klingon_Dreadnought_Dsc_Sarcophagus": {
             "map": "Battle At The Binary Stars",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Event_Procyon_5_Queue_Krenim_Dreadnaught_Annorax": {
             "map": "Battle At Procyon V",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Space_Borg_Queen_Diamond_Brg_Queue_Liberation": {
             "map": "Borg Disconnected",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Starbase_Mirror_Ds9_Mu_Queue": {
             "map": "Counterpoint",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Crystalline_Entity_2018": {
             "map": "Crystalline Entity",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Event_Ico_Qonos_Space_Herald_Dreadnaught": {
             "map": "Gateway To Grethor",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Space_Federation_Science_Herald_Sphere": {
             "map": "Herald Sphere",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Msn_Dsc_Priors_System_Tfo_Orbital_Platform_1_Fed_Dsc": {
             "map": "Operation Riposte",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Borg_Dreadnought_R02": {
             "map": "Cure Found",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Klingon_Tos_X3_Battlecruiser": {
             "map": "Days Of Doom",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Msn_Luk_Colony_Dranuur_Queue_System_Upgradeable_Satellite": {
             "map": "Dranuur Gauntlet",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Borg_Dreadnought_Raidisode_Khitomer_Intro_Boss": {
             "map": "Khitomer Space",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Spire_Space_Voth_Frigate": {
             "map": "Storming The Spire",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Drantzuli_Alpha_Battleship": {
             "map": "Swarm",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Beta_Lankal_Destructible_Reactor": {
             "map": "To Hell With Honor",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Federation_Dreadnought_Jupiter_Class_Carrier": {
             "map": "Gravity Kills",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Msn_Luk_Hypermass_Queue_System_Tzk_Protomatter_Facility": {
             "map": "Gravity Kills",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Borg_Dreadnought_Hive_Intro": {
             "map": "Hive Space",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Ground_Federation_Capt_Mirror_Runabout_Tfo": {
             "map": "Operation Wolf",
@@ -97,23 +97,23 @@ class Detection:
         },
         "Bluegills_Ground_Boss": {
             "map": "Bug Hunt",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Msn_Edren_Queue_Ground_Gorn_Lt_Tos_Range_Rock": {
             "map": "Miner Instabilities",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Msn_Ground_Capt_Mirror_Janeway_Boss_Unkillable": {
             "map": "Jupiter Station Showdown",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Mission_Event_Tholian_Invasion_Ext_Boss": {
             "map": "Nukara Prime: Transdimensional Tactics",
-            "difficulty": None,
+            "difficulty": "Any",
         },
         "Space_Borg_Dreadnought_Wolf359": {
             "map": "Battle of Wolf 359",
-            "difficulty": None,
+            "difficulty": "Any",
         },
     }
 
@@ -132,6 +132,7 @@ class Detection:
                 "Space_Borg_Cruiser_Raidisode_Sibrian_Elite_Initial": 4,
                 "Space_Borg_Battleship_Raidisode": 2,
                 "Mission_Borgraid1_Transwarp_02": 1,
+                "Space_Borg_Dreadnought_Raidisode_Sibrian_Final_Boss": 1,
             },
         },
         "Hive Space": {

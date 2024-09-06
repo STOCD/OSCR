@@ -4,6 +4,7 @@ import gzip
 from io import TextIOWrapper
 from re import sub as re_sub
 from datetime import timedelta
+from time import time, time_ns
 
 from .utilities import to_datetime, logline_to_str
 
@@ -211,6 +212,28 @@ def save_log(path: str, lines: list, overwrite: bool = False):
     with open(path, 'w', encoding='utf-8') as file:
         for line in map(logline_to_str, lines):
             file.write(line)
+
+
+def repair_logfile(path: str, templog_folder_path: str):
+    """
+    Replace bugged combatlog lines
+
+    Parameters:
+    - :param path: logfile to repair
+    """
+    patches = ((b'Rehona, Sister of the Qowat Milat', b'Rehona - Sister of the Qowat Milat'),)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Path to logfile doesn't exist: {path}")
+    tempfile_path = f'{templog_folder_path}\\{int(time())}'
+    with open(path, 'rb') as log_file:
+        with open(tempfile_path, 'wb') as temp_file:
+            for line in log_file:
+                for broken_string, fixed_string in patches:
+                    if broken_string in line:
+                        temp_file.write(line.replace(broken_string, fixed_string))
+                    else:
+                        temp_file.write(line)
+    shutil.copyfile(tempfile_path, path)
 
 
 def reset_temp_folder(path: str):
