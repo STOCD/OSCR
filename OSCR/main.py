@@ -105,11 +105,23 @@ class OSCR():
             self.combats = list()
             self.excess_log_lines = list()
 
+        # Remove blank lines from beginning of the log.
+        while True:
+            if log_lines[0] == "\n":
+                log_lines = log_lines[1:]
+            else:
+                break
+
         combat_delta = timedelta(seconds=self._settings['seconds_between_combats'])
         last_log_time = to_datetime(log_lines[0].split('::')[0]) + 2 * combat_delta
         current_combat = Combat(self._settings['graph_resolution'])
 
         for line_num, line in enumerate(log_lines):
+
+            # Some Old logs from SCM have blank lines. Skip them.
+            if line == "\n":
+                continue
+
             time_data, attack_data = line.split('::')
             log_time = to_datetime(time_data)
             if last_log_time - log_time > combat_delta:
