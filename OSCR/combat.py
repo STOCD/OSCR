@@ -23,7 +23,10 @@ def check_difficulty_deaths(difficulty, data, metadata):
         if meta is None:
             # Map is missing some NPC data - it's invalid.
             return False
-        valid = v == meta["deaths"]
+        if v > 0:
+            valid = v == meta["deaths"]
+        else:
+            valid = meta["deaths"] != 0
         if not valid:
             return False
     return True
@@ -102,7 +105,6 @@ class Combat:
         self.analyze_players()
         self.analyze_critters()
 
-
     def analyze_players(self):
         """
         Analyze players to determine time-based metrics such as DPS.
@@ -127,11 +129,13 @@ class Combat:
             total_heals += player.total_heals
 
         for player in self.players.values():
-            player.combat_time = player.combat_interval[1] - player.combat_interval[0]
+            player.combat_time = player.combat_interval[1] - \
+                player.combat_interval[0]
             successful_attacks = player.hull_attacks - player.misses
 
             try:
-                player.debuff = (player.total_damage / player.base_damage - 1) * 100
+                player.debuff = (player.total_damage /
+                                 player.base_damage - 1) * 100
             except ZeroDivisionError:
                 player.debuff = 0.0
             try:
@@ -172,8 +176,10 @@ class Combat:
                         player.build = v
                         break
 
-            player.graph_time = tuple(map(lambda x: round(x, 1), player.graph_time))
-            DPS_data = numpy.array(player.DMG_graph_data, dtype=numpy.float64).cumsum()
+            player.graph_time = tuple(
+                map(lambda x: round(x, 1), player.graph_time))
+            DPS_data = numpy.array(player.DMG_graph_data,
+                                   dtype=numpy.float64).cumsum()
             player.DPS_graph_data = tuple(DPS_data / player.graph_time)
 
     def analyze_critters(self):
@@ -283,7 +289,8 @@ class Combat:
     def __gt__(self, other):
         if not isinstance(other, Combat):
             raise TypeError(
-                f"Cannot compare {self.__class__.__name__} to {other.__class__.__name__}"
+                f"Cannot compare {self.__class__.__name__} to {
+                    other.__class__.__name__}"
             )
         if isinstance(self.date_time, datetime) and isinstance(
             self.date_time, datetime

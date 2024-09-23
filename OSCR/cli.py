@@ -22,7 +22,7 @@ def list_combats(parser):
 def shallow(args, parser):
     """Print the combat summary for each combat"""
     for idx, _ in enumerate(parser.analyzed_combats):
-        parser.shallow_combat_analysis(idx)
+        parser.full_combat_analysis(idx)
         combat = parser.active_combat
         print(
             f"start={combat.start_time} end={combat.end_time} duration={combat.duration} map={combat.map} difficulty={combat.difficulty}"

@@ -135,6 +135,41 @@ class Detection:
                 "Space_Borg_Dreadnought_Raidisode_Sibrian_Final_Boss": 1,
             },
         },
+        "Cure Found": {
+            "Advanced": {
+                "Space_Borg_Battleship_Raidisode_Cure": 3,
+                "Mission_Cure_Healer_Mini_Trans_02": 18,
+                "Space_Borg_Cruiser_Raidisode_Cure": 3,
+                "Space_Borg_Cruiser_Raidisode": 2,
+                "Space_Borg_Dreadnought_R02": 1,
+                "Space_Klingon_Raider_Pet_Borg_Carrier_Advanced": 0,
+            },
+            "Elite": {
+                "Space_Borg_Battleship_Raidisode_Cure": 3,
+                "Mission_Cure_Healer_Mini_Trans_02": 18,
+                "Space_Borg_Cruiser_Raidisode_Cure": 3,
+                "Space_Borg_Cruiser_Raidisode": 2,
+                "Space_Borg_Dreadnought_R02": 1,
+                "Space_Klingon_Fighter_Pet_Borg_Elite": 0,
+            },
+        },
+        "Khitomer Space": {
+            "Elite": {
+                "Space_Borg_Dreadnought_Raidisode_Khitomer_Intro_Boss": 1,
+                "Mission_Raidisode03_Donatra_Borg_Scimitar": 1,
+                "Mission_Borgraid1_Transwarp_02": 2,
+                "Space_Borg_Battleship_Raidisode": 4,
+                "Mission_Borgraid1_Comm_Array": 4,
+                "Space_Borg_Dreadnought_Raidisode": 4,
+            },
+            "Advanced": {
+                "Space_Borg_Dreadnought_Raidisode_Khitomer_Intro_Boss": 1,
+                "Mission_Raidisode03_Donatra_Borg_Scimitar": 1,
+                "Mission_Borgraid1_Transwarp_02": 2,
+                "Space_Borg_Battleship_Raidisode": 4,
+                "Mission_Borgraid1_Comm_Array": 4,
+            },
+        },
         "Hive Space": {
             "Advanced": {
                 "Mission_Space_Borg_Queen_Diamond": 1,
@@ -166,11 +201,6 @@ class Detection:
             "Elite": {
                 "Ground_Nakuhl_Capt_Range_Male": 1,
             }
-        },
-        "Nukara Prime: Transdimensional Tactics": {
-            "Elite": {
-                "Mission_Event_Tholian_Invasion_Ext_Boss": 1,
-            },
         },
         "Battle of Wolf 359": {
             "Elite": {
@@ -224,11 +254,6 @@ class Detection:
                 # "Ground_Nakuhl_Ens_Melee": 2605,
                 # "Ground_Nakuhl_Ens_Range": 2605,
                 "Ground_Nakuhl_Capt_Range_Male": 20843,
-            }
-        },
-        "Nukara Prime: Transdimensional Tactics": {
-            "Elite": {
-                "Mission_Event_Tholian_Invasion_Ext_Boss_Portal": 0,
             }
         },
         "Battle of Wolf 359": {
