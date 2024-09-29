@@ -123,6 +123,11 @@ class OSCR():
               if line == "\n":
                   continue
 
+              # Rehona completely breaks the combat log. Skip any line with her in it.
+              if "Rehona, Sister of the Qowat Milat" in line:
+                  print("Detected Rehona, skipping line")
+                  continue
+
               time_data, attack_data = line.split('::')
               log_time = to_datetime(time_data)
               if last_log_time - log_time > combat_delta:
@@ -146,7 +151,9 @@ class OSCR():
               current_combat.analyze_last_line()
               if not current_combat.end_time:
                   current_combat.end_time = last_log_time
-        except Exception as ex:
+        except Exception:
+            raise Exception(f"Failed to read log with line: {line_num} \n\n{line}")
+        except ValueError:
             raise Exception(f"Failed to read log with line: {line_num} \n\n{line}")
 
         current_combat.start_time = last_log_time
