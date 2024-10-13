@@ -37,7 +37,7 @@ oscr-cli = "OSCR.cli:main"
 
 [tool.hatch.version]
 path = "OSCR/main.py"
-pattern = "\\s*version = '(?P<version>.*)'"
+pattern = "\\s*version = \"(?P<version>.*)\""
 
 [tool.black]
 target-version = ['py38']
