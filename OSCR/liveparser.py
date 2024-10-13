@@ -207,10 +207,10 @@ class LiveParser():
                                 self._players[attacker_handle]['combat_start'] = timestamp
                     if not is_heal and attack_data[5] != '*':
                         if self._players[attacker_handle]['combat_start'] is None:
-                            self._players[attacker_handle]['combat_start'] = timestamp
-                        self._players[attacker_handle]['combat_end'] = timestamp
-                    if not is_heal:
+                            with self._lock:
+                                self._players[attacker_handle]['combat_start'] = timestamp
                         with self._lock:
+                            self._players[attacker_handle]['combat_end'] = timestamp
                             self._players[attacker_handle]['damage'] += magnitude
                             self._players[attacker_handle]['damage_buffer'] += magnitude
                             self._players[attacker_handle]['base_damage_buffer'] += magnitude2
