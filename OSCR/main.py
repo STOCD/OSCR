@@ -13,7 +13,7 @@ ignored_abilities = [
 
 
 class OSCR:
-    version = "2024.10.13.1"
+    version = "2024.11.30.1"
 
     def __init__(self, log_path: str = None, settings: dict = None):
         self.log_path = log_path

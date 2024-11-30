@@ -477,28 +477,40 @@ def combine_children_damage_stats(item: TreeItem) -> tuple:
     - :param item: item to retrieve children data from; item.data must be string containing the
     ability name
     '''
-    for index, column in enumerate(zip(*item._children)):
-        if index == 0:
-            if isinstance(item.data, (str, tuple)):
-                combined_data = [item.data]
-            else:
-                combined_data = [(item.data.name, item.data.handle)]
-            continue
-        if index in {5, 6, 7}:
-            combined_data.append(sum(column) / len(column))
-        elif index == 3:
-            combined_data.append(0)
-        elif index == 4:
-            combined_data.append(max(column))
-        elif index == 19:
-            combined_data.append(column[0])
-        else:
-            combined_data.append(sum(column))
+    children_data = tuple(zip(*item._children))
+    result_data = [None] * 22
+    combat_time = result_data[19] = children_data[19][0]
+    if isinstance(item.data, (str, tuple)):
+        result_data[0] = item.data
+    else:
+        result_data[0] = (item.data.name, item.data.handle)
+    for index in (2, 8, 9, 10, 11, 12, 13, 15, 17, 20, 21):
+        result_data[index] = sum(children_data[index])
+    result_data[4] = max(children_data[4])  # max_one_hit
     try:
-        combined_data[3] = (combined_data[2] / combined_data[17]) - 1
+        result_data[1] = result_data[2] / combat_time  # DPS
+        result_data[14] = result_data[13] / combat_time  # shield_DPS
+        result_data[16] = result_data[15] / combat_time  # hull_DPS
+        result_data[18] = result_data[17] / combat_time  # base_DPS
     except ZeroDivisionError:
-        combined_data[3] = 0.0
-    item.data = tuple(combined_data)
+        result_data[1] = 0.0
+        result_data[14] = 0.0
+        result_data[16] = 0.0
+        result_data[18] = 0.0
+    try:
+        result_data[3] = (result_data[2] / result_data[17]) - 1  # debuff
+    except ZeroDivisionError:
+        result_data[3] = 0.0
+    successful_attacks = result_data[20] - result_data[10]
+    try:
+        result_data[5] = result_data[11] / successful_attacks  # crit_chance
+        result_data[6] = successful_attacks / result_data[20]  # accuracy
+        result_data[7] = result_data[12] / successful_attacks  # flank_rate
+    except ZeroDivisionError:
+        result_data[5] = 0.0
+        result_data[6] = 0.0
+        result_data[7] = 0.0
+    item.data = tuple(result_data)
 
 
 def combine_children_heal_stats(item: TreeItem) -> tuple:
