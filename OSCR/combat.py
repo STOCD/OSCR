@@ -64,7 +64,7 @@ class Combat:
     results.
     """
 
-    def __init__(self, graph_resolution: float = 0.2, id: int = -1):
+    def __init__(self, graph_resolution: float = 0.2, id: int = -1, log_file: str = ''):
         self.log_data: deque[LogLine] = deque()
         self.id: int = id
         self.map = None
@@ -72,6 +72,7 @@ class Combat:
         self.start_time: datetime = None
         self.end_time: datetime = None
         self.file_pos: list[int, int] = [None, None]
+        self.log_file: str = log_file
         self.players: dict[str, OverviewTableRow] = dict()
         self.critters: dict = dict()
         self.critter_meta: dict = dict()

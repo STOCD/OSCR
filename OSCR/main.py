@@ -10,7 +10,7 @@ from .combat import Combat
 from .constants import BANNED_ABILITIES
 from .datamodels import LogLine, TreeItem
 from .oscr_read_file_backwards import ReadFileBackwards
-from .iofunc import get_combat_log_data, reset_temp_folder, save_log, split_log_by_lines
+from .iofunc import extract_bytes, get_combat_log_data, reset_temp_folder, split_log_by_lines
 from .parser import analyze_combat
 from .utilities import datetime_to_display, to_datetime
 
@@ -127,7 +127,7 @@ class OSCR:
             error_handler: Callable[[BaseException], None] = raise_error):
         combat_delta = timedelta(seconds=settings['seconds_between_combats'])
         combat_id = first_combat_id
-        current_combat = Combat(settings['graph_resolution'], combat_id)
+        current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
         log_consumed = True
         try:
             with ReadFileBackwards(log_path, offset) as backwards_file:
@@ -154,7 +154,7 @@ class OSCR:
                             log_consumed = False
                             new_offset = backwards_file.get_bytes_read(True) + offset
                             break
-                        current_combat = Combat(settings['graph_resolution'], combat_id)
+                        current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
                         current_combat.end_time = log_time
                         current_combat.file_pos[1] = current_file_position
                     current_line = LogLine(
@@ -485,11 +485,10 @@ class OSCR:
         - :param path: path to export the log to, will overwrite existing files
         """
         try:
-            log_lines = self.combats[combat_num].log_data
+            combat = self.combats[combat_num]
         except IndexError:
             raise AttributeError(
                 f"Combat #{combat_num} you are trying to save has not been isolated yet."
                 f"Number of isolated combats: {len(self.combats)} -- Use "
-                "OSCR.analyze_log_file() with appropriate arguments first."
-            )
-        save_log(path, log_lines, True)
+                "OSCR.analyze_log_file() with appropriate arguments first.")
+        extract_bytes(combat.log_file, path, combat.file_pos[0], combat.file_pos[1])
