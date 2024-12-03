@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from re import search as re_search
 from typing import Generator, Iterable
 
@@ -16,6 +16,11 @@ def to_datetime(date_time: str) -> datetime:
     date_time_list[0] += 2000
     date_time_list[6] *= 100000
     return datetime(*date_time_list)
+
+
+def to_microseconds(timedelta: timedelta):
+    return ((timedelta.days * (24 * 3600) + timedelta.seconds) * 1000000
+            + timedelta.microseconds)
 
 
 def datetime_to_str(date_time: datetime) -> str:
@@ -48,19 +53,25 @@ def logline_to_str(line) -> str:
 
 def get_handle_from_id(id_str: str) -> str:
     '''
-    returns player handle from is string
+    returns player handle from id string
     '''
     if id_str.startswith('P'):
-        handle = re_search(PLAYER_HANDLE_REGEX, id_str)
-        if handle is None:
-            return ''
-        return handle.group('handle')
-
-    handle = re_search(COMPUTER_HANDLE_REGEX, id_str)
-    if handle is None:
+        _, _, handle_part = id_str.rpartition('@')
+        return '@' + handle_part[:-1]
+    elif id_str.startswith('C'):
+        handle_part, _ = id_str.split(' ', maxsplit=1)
+        # the space enables consistent concatenation behaviour between players and NPCs
+        return f' {handle_part[2:]}'
+    else:
         return ''
-    # the space is intentional to allow for fancy concatenation of name and handle
-    return f' {handle.group("handle")}'
+
+
+def get_player_handle(id_str: str) -> str:
+    """
+    returns player handle from id string
+    """
+    _, _, handle_part = id_str.rpartition('@')
+    return '@' + handle_part[:-1]
 
 
 def get_entity_name(entity_id: str) -> str:
@@ -98,7 +109,7 @@ def reversed_index(length: int) -> Generator[int, None, None]:
         yield counter
 
 
-def bundle(*iterables: Iterable) -> Generator:
+def bundle[_T](*iterables: Iterable[_T]) -> Generator[_T, None, None]:
     """
     Generator yielding the items of the given iterables in the order they were provided.
 

@@ -59,7 +59,7 @@ def main():
     args = parser.parse_args()
 
     parser = OSCR.OSCR(args.input)
-    parser.analyze_log_file()
+    parser.analyze_log_file_old()
 
     if args.list:
         list_combats(parser)
