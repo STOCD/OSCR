@@ -35,7 +35,7 @@ def analyze_combat(combat: Combat, settings: dict) -> tuple[TreeModel, ...]:
         crit_flag, miss_flag, flank_flag, kill_flag, shield_break_flag = get_flags(line.flags)
         is_heal = (
                 (is_shield_line and line.magnitude < 0 and line.magnitude2 >= 0)
-                or line.type == 'HitPoints')
+                or (line.type == 'HitPoints' and line.magnitude < 0))
 
         relative_combat_sec = (timestamp - combat_start).seconds
 
