@@ -1,4 +1,4 @@
-""" Combat Detection Methods """
+"""Combat Detection Methods"""
 
 from .datamodels import LogLine
 from .utilities import get_entity_name
@@ -114,6 +114,10 @@ class Detection:
         "Space_Borg_Dreadnought_Wolf359": {
             "map": "Battle of Wolf 359",
             "difficulty": "Any",
+        },
+        "Snowman_Q_Boss_Msn_Snowglobe": {
+            "map": "Winter Invasion",
+            "difficulty": "Normal",
         },
     }
 
