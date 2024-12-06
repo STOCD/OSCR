@@ -31,7 +31,7 @@ def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
         is_shield_line = line.type == 'Shield'
         crit_flag, miss_flag, flank_flag, kill_flag, _, _ = get_flags(line.flags)
         is_heal = (
-                line.type == 'HitPoints'
+                (line.type == 'HitPoints' and line.magnitude < 0)
                 or (is_shield_line and line.magnitude < 0 and line.magnitude2 >= 0))
 
         relative_combat_sec = (timestamp - combat_start).seconds
