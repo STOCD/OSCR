@@ -1,7 +1,6 @@
-import traceback
 from collections.abc import Callable
 from datetime import timedelta
-from multiprocessing import Event, freeze_support, Process, Queue, set_start_method
+from multiprocessing import Event, Process, Queue
 from multiprocessing.pool import Pool
 import os
 from queue import Empty as EmptyException
@@ -14,10 +13,6 @@ from .iofunc import extract_bytes, get_combat_log_data, reset_temp_folder, split
 from .parser import analyze_combat
 from .utilities import datetime_to_display, to_datetime
 
-# configure multiprocessing
-if __name__ == '__module__':
-    freeze_support()
-    set_start_method('spawn')
 
 ignored_abilities = [
     "Electrical Overload",
@@ -33,7 +28,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.03.1"
+    version = "2024.12.06.1"
 
     def __init__(self, log_path: str = '', settings: dict = None):
         self.log_path = log_path
@@ -271,7 +266,8 @@ class OSCR:
             else:
                 combats_isolated_num += 1
                 self._pool.apply_async(
-                        analyze_combat, args=(data,), callback=self.handle_analyzed_result)
+                        analyze_combat, args=(data,), callback=self.handle_analyzed_result,
+                        error_callback=self.error_callback)
         self._pool.close()
 
     @staticmethod

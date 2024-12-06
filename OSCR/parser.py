@@ -148,13 +148,20 @@ def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
                         combat_duration_delta = line.timestamp - combat.log_data[0].timestamp
                         break  # ignore all lines after the Queen kill line in the Hive Space queue
 
+    combat.meta['log_duration'] = combat_duration_delta.total_seconds()
     overview_graph_intervals: dict[str, tuple] = dict()
+    first_player_shot = list()
+    last_player_shot = list()
     for actor_id, (start_time, end_time) in actor_combat_durations.items():
         if actor_id.startswith('P'):
             start = int((start_time - combat.start_time).total_seconds() // combat.graph_resolution)
             end = int((end_time - combat.start_time).total_seconds() // combat.graph_resolution + 1)
             overview_graph_intervals[get_player_handle(actor_id)] = (start, end)
+            first_player_shot.append(start_time)
+            last_player_shot.append(end_time)
         actor_combat_durations[actor_id] = round((end_time - start_time).total_seconds(), 1)
+    combat.meta['player_duration'] = (
+            max(last_player_shot) - min(first_player_shot)).total_seconds()
 
     merge_single_lines(dmg_out_model)
     combat_duration = combat_duration_delta.total_seconds()

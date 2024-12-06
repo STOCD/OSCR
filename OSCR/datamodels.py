@@ -42,6 +42,34 @@ class CritterMeta:
         return f'<CritterMeta "{self.name}">'
 
 
+class DetectionInfo:
+    """
+    Stores information on the detection process
+    """
+
+    __slots__ = (
+            'success', 'type', 'identificators', 'target_value', 'retrieved_value', 'step',
+            'map', 'difficulty')
+
+    def __init__(
+            self, success: bool, type: str = '', identificators: tuple = (), target_value: int = 0,
+            retrieved_value: int = 0, step: str = '', map=None, difficulty=None):
+        self.success = success
+        self.type = type
+        self.identificators = identificators
+        self.target_value = target_value
+        self.retrieved_value = retrieved_value
+        self.step = step
+        self.map = map
+        self.difficulty = difficulty
+
+    def __repr__(self):
+        return f'<DetectionInfo success={self.success} type={self.type}>'
+
+    def __bool__(self):
+        return self.success
+
+
 class OverviewTableRow:
     '''
     Contains a single row of data
