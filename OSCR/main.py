@@ -28,7 +28,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.06.2"
+    version = "2024.12.07.1"
 
     def __init__(self, log_path: str = '', settings: dict = None):
         self.log_path = log_path
@@ -168,7 +168,10 @@ class OSCR:
                     combat_handler(current_combat)
                 new_offset = -1
         except BaseException as e:
-            e.args = (*e.args, line)
+            if line in locals():
+                e.args = (*e.args, line)
+            else:
+                e.args = (*e.args, 'Error before loop!')
             error_handler(e)
             return 0
         return new_offset

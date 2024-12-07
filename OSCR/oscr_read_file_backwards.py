@@ -116,4 +116,5 @@ class ReadFileBackwards():
 
     def _calculate_not_consumed_bytes(self, ignore_lines: int = 0):
         not_consumed = LINE_SEP.join(self._lines[:ignore_lines - self._iter_counter]) + LINE_SEP
-        return len(self._remainder + LINE_SEP_BYTES + not_consumed.encode('utf-8'))
+        remainder = self._remainder + LINE_SEP_BYTES if len(self._remainder) > 0 else bytes()
+        return len(remainder + not_consumed.encode('utf-8'))
