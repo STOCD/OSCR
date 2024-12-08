@@ -167,7 +167,8 @@ class Combat:
                 player.heal_crit_chance = heal_out_data[8]
                 player.heal_crit_num = heal_out_data[10]
                 player.heal_num = heal_out_data[9]
-            self.create_overview_graphs(player, overview_graph_intervals[player.handle])
+            if player.handle in overview_graph_intervals:
+                self.create_overview_graphs(player, overview_graph_intervals[player.handle])
             self.players[''.join(player_name_handle_id)] = player
 
         for player in self.players.values():

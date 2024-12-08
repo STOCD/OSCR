@@ -160,8 +160,11 @@ def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
             first_player_shot.append(start_time)
             last_player_shot.append(end_time)
         actor_combat_durations[actor_id] = round((end_time - start_time).total_seconds(), 1)
-    combat.meta['player_duration'] = (
-            max(last_player_shot) - min(first_player_shot)).total_seconds()
+    if len(first_player_shot) > 0 and len(last_player_shot) > 0:
+        combat.meta['player_duration'] = (
+                max(last_player_shot) - min(first_player_shot)).total_seconds()
+    else:
+        combat.meta['player_duration'] = 0
 
     merge_single_lines(dmg_out_model)
     combat_duration = combat_duration_delta.total_seconds()
