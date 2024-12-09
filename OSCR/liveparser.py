@@ -28,8 +28,8 @@ class LiveParser():
         to analyze the logfile initiated by the LiveParser.start() function; no arguments will be
         passed
         - :param update_callback: function that is called once every second when the parser is
-        running; it will be passed a dictionary with the data acquired in the last second as
-        positional argument
+        running; it will be passed a dictionary with the player data acquired in the last second as
+        positional argument and the total combat time as second positional argument
         - :param settings: contains settings
             - "seconds_between_combats": number of inactive seconds after which a new engagement
             resets the collected data
@@ -91,7 +91,7 @@ class LiveParser():
             return
         self._update_timer = Timer(interval=1, function=self.update_data)
         self._update_timer.start()
-        if not self._players:
+        if len(self._players) < 1:
             return
         total_attacks_in = 0
         with self._lock:
@@ -102,8 +102,15 @@ class LiveParser():
                 player['base_damage_buffer'] = 0
                 player['damage_buffer'] = 0
         output = dict()
+        first_player_attacks = list()
+        last_player_attacks = list()
         for player, player_data in player_copy.items():
+            _, _, handle_part = player.rpartition(' ')
+            index = handle_part.index('@')
+            name_and_handle = (handle_part[:index], handle_part[index:-1])
             if player_data['combat_start'] is not None:
+                first_player_attacks.append(player_data['combat_start'])
+                last_player_attacks.append(player_data['combat_end'])
                 combat_time = player_data['combat_end'] - player_data['combat_start']
                 try:
                     dps = player_data['damage'] / combat_time
@@ -125,7 +132,7 @@ class LiveParser():
                 attacks_in_share = player_data['attacks_in_buffer'] / total_attacks_in
             except ZeroDivisionError:
                 attacks_in_share = 0
-            output[player] = {
+            output[name_and_handle] = {
                 'dps': dps,
                 'combat_time': combat_time,
                 'local_debuff': debuff * 100,
@@ -134,7 +141,8 @@ class LiveParser():
                 'kills': player_data['kills'],
                 'deaths': player_data['deaths']
             }
-        self.update_callback(output)
+        player_combat_duration = max(last_player_attacks) - min(first_player_attacks)
+        self.update_callback(output, player_combat_duration)
 
     def analyze(self):
         """
@@ -176,23 +184,18 @@ class LiveParser():
                 is_shield = attack_data[8] == 'Shield'
                 is_heal = (
                         (is_shield and magnitude < 0 and magnitude2 >= 0)
-                        or attack_data[8] == 'HitPoints')
+                        or (attack_data[8] == 'HitPoints' and magnitude < 0))
                 is_kill = 'Kill' in attack_data[9]
                 magnitude = abs(magnitude)
                 magnitude2 = abs(magnitude2)
 
-                # ignore self damage and damage from unknown sources
-                try:
-                    attacker_handle = attack_data[1].split('@', 2)[-1][:-1]
-                    target_handle = attack_data[5].split('@', 2)[-1][:-1]
-                except IndexError:
-                    if not is_heal:
-                        continue
+                attacker_id = attack_data[1]
+                target_id = attack_data[5]
 
                 if player_attacks:
-                    if attacker_handle not in self._players:
+                    if attacker_id not in self._players:
                         with self._lock:
-                            self._players[attacker_handle] = {
+                            self._players[attacker_id] = {
                                 'damage': 0,
                                 'combat_start': None,
                                 'combat_end': None,
@@ -204,25 +207,25 @@ class LiveParser():
                                 'deaths': 0
                             }
                             if not is_heal and attack_data[5] != '*':
-                                self._players[attacker_handle]['combat_start'] = timestamp
+                                self._players[attacker_id]['combat_start'] = timestamp
                     if not is_heal and attack_data[5] != '*':
-                        if self._players[attacker_handle]['combat_start'] is None:
+                        if self._players[attacker_id]['combat_start'] is None:
                             with self._lock:
-                                self._players[attacker_handle]['combat_start'] = timestamp
+                                self._players[attacker_id]['combat_start'] = timestamp
                         with self._lock:
-                            self._players[attacker_handle]['combat_end'] = timestamp
-                            self._players[attacker_handle]['damage'] += magnitude
-                            self._players[attacker_handle]['damage_buffer'] += magnitude
-                            self._players[attacker_handle]['base_damage_buffer'] += magnitude2
+                            self._players[attacker_id]['combat_end'] = timestamp
+                            self._players[attacker_id]['damage'] += magnitude
+                            self._players[attacker_id]['damage_buffer'] += magnitude
+                            self._players[attacker_id]['base_damage_buffer'] += magnitude2
                             if is_kill:
-                                self._players[attacker_handle]['kills'] += 1
+                                self._players[attacker_id]['kills'] += 1
                     else:
                         with self._lock:
-                            self._players[attacker_handle]['heal'] += magnitude
+                            self._players[attacker_id]['heal'] += magnitude
                 if player_attacked and not is_shield:
-                    if target_handle not in self._players:
+                    if target_id not in self._players:
                         with self._lock:
-                            self._players[target_handle] = {
+                            self._players[target_id] = {
                                 'damage': 0,
                                 'combat_start': None,
                                 'base_damage_buffer': 0,
@@ -233,6 +236,6 @@ class LiveParser():
                                 'deaths': 0
                             }
                     with self._lock:
-                        self._players[target_handle]['attacks_in_buffer'] += 1
+                        self._players[target_id]['attacks_in_buffer'] += 1
                         if is_kill:
-                            self._players[target_handle]['deaths'] += 1
+                            self._players[target_id]['deaths'] += 1
