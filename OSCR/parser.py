@@ -141,11 +141,12 @@ def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
             if kill_flag:
                 ability_target.kills += 1
                 source_ability.kills += 1
-                if (ability_target.name == 'Borg Queen Octahedron'
-                        or ((line.source_id == '*' or line.owner_id == '*')
-                            and line.owner_name == 'Borg Queen Octahedron')):
+                if (line.target_name == 'Borg Queen Octahedron'
+                        or (line.target_id == '*' and (line.owner_name == 'Borg Queen Octahedron'
+                            or line.source_name == 'Borg Queen Octahedron'))):
                     if combat.map_is_hive_space():
                         combat_duration_delta = line.timestamp - combat.log_data[0].timestamp
+                        print(line)
                         break  # ignore all lines after the Queen kill line in the Hive Space queue
 
     combat.meta['log_duration'] = combat_duration_delta.total_seconds()

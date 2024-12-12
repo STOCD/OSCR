@@ -247,6 +247,8 @@ def repair_logfile(path: str, templog_folder_path: str):
     tempfile_path = f'{templog_folder_path}\\{int(time())}'
     with open(path, 'rb') as log_file, open(tempfile_path, 'wb') as temp_file:
         for line in log_file:
+            if line.strip() == b'':
+                continue
             for broken_string, fixed_string in patches:
                 if broken_string in line:
                     temp_file.write(line.replace(broken_string, fixed_string))
