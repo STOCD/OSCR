@@ -8,10 +8,11 @@ from queue import Empty as EmptyException
 from .combat import Combat
 from .constants import BANNED_ABILITIES
 from .datamodels import LogLine, TreeItem
+from .detection import Detection
 from .oscr_read_file_backwards import ReadFileBackwards
 from .iofunc import extract_bytes, get_combat_log_data, reset_temp_folder, split_log_by_lines
 from .parser import analyze_combat
-from .utilities import datetime_to_display, to_datetime
+from .utilities import datetime_to_display, get_entity_name, to_datetime
 
 
 ignored_abilities = [
@@ -28,7 +29,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.12.1"
+    version = "2024.12.14.1"
 
     def __init__(self, log_path: str = '', settings: dict = None):
         self.log_path = log_path
@@ -56,6 +57,7 @@ class OSCR:
 
         if settings is not None:
             self._settings.update(settings)
+        reset_temp_folder(self._settings['templog_folder_path'])
 
     def __del__(self):
         if isinstance(self._pool, Pool):
@@ -408,6 +410,76 @@ class OSCR:
             total_combats,
             log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer],
         )
+
+    def isolate_combats(self, path: str, max_combats: int = -1) -> list[tuple]:
+        """
+        Returns list of combats in logfile at given `path`.
+
+        Parameters:
+        - :param path: path to the logfile
+        - :param max_combats: maximum number of combats to isolate
+
+        :return: tuple(number of combat in file, map, date, time, difficulty, byte_start, byte_end)
+        """
+        combat_delta = timedelta(seconds=self._settings['seconds_between_combats'])
+        combat_id = 0
+        current_map_and_difficulty = ['Combat', '']
+        map_identifiers = set(Detection.MAP_IDENTIFIERS_EXISTENCE.keys())
+        combats = list()
+        current_end_bytes = -1
+        current_line_num = 0
+        try:
+            with ReadFileBackwards(path) as backwards_file:
+                llt = to_datetime(backwards_file.top.split('::')[0])
+                current_end_bytes = backwards_file.filesize
+                for line in backwards_file:
+                    if line == '':
+                        continue
+                    time_data, attack_data = line.split('::')
+                    splitted_line = attack_data.split(',')
+                    log_time = to_datetime(time_data)
+                    if llt - log_time > combat_delta:
+                        current_file_position = backwards_file.filesize - (
+                                backwards_file.get_bytes_read(True))
+                        if current_line_num >= 20:
+                            combats.append((
+                                combat_id,
+                                current_map_and_difficulty[0],
+                                f'{llt.year}-{llt.month:02d}-{llt.day:02d}',
+                                f'{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}',
+                                current_map_and_difficulty[1],
+                                current_file_position,
+                                current_end_bytes))
+                            combat_id += 1
+                        if combat_id >= max_combats > 0:
+                            return combats
+                        current_map_and_difficulty = ['Combat', '']
+                        current_end_bytes = current_file_position
+                        current_line_num = 0
+                    if get_entity_name(splitted_line[5]) in map_identifiers:
+                        m = Detection.MAP_IDENTIFIERS_EXISTENCE[get_entity_name(splitted_line[5])]
+                        current_map_and_difficulty[0] = m['map']
+                        if m['difficulty'] != 'Any':
+                            current_map_and_difficulty[1] = m['difficulty']
+                    current_line_num += 1
+                    llt = log_time
+            if current_line_num >= 20:
+                combats.append((
+                    combat_id,
+                    current_map_and_difficulty[0],
+                    f'{llt.year}-{llt.month:02d}-{llt.day:02d}',
+                    f'{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}',
+                    current_map_and_difficulty[1],
+                    current_file_position,
+                    current_end_bytes))
+        except BaseException as e:
+            if 'line' in locals():
+                e.args = (*e.args, line)
+            else:
+                e.args = (*e.args, 'Error before loop!')
+            self.error_callback(e)
+            return []
+        return combats
 
     def navigate_log(self, direction: str = "down"):
         """

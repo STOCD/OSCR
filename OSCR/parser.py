@@ -146,7 +146,6 @@ def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
                             or line.source_name == 'Borg Queen Octahedron'))):
                     if combat.map_is_hive_space():
                         combat_duration_delta = line.timestamp - combat.log_data[0].timestamp
-                        print(line)
                         break  # ignore all lines after the Queen kill line in the Hive Space queue
 
     combat.meta['log_duration'] = combat_duration_delta.total_seconds()

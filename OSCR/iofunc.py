@@ -5,6 +5,7 @@ import os
 from re import sub as re_sub
 import shutil
 from time import time
+from typing import Iterable
 
 from .utilities import to_datetime, logline_to_str
 
@@ -229,9 +230,31 @@ def extract_bytes(source_path: str, target_path: str, start_pos: int, end_pos: i
         raise AttributeError(f'source_path is not absolute: {source_path}')
     if not os.path.isabs(target_path):
         raise AttributeError(f'target_path is not absolute: {target_path}')
-    with open(source_path, 'rb') as source_file, open(target_path, 'wb') as target_file:
+    with open(source_path, 'rb') as source_file:
         source_file.seek(start_pos)
-        target_file.write(source_file.read(end_pos - start_pos))
+        extracted_bytes = source_file.read(end_pos - start_pos)
+    with open(target_path, 'wb') as target_file:
+        target_file.write(extracted_bytes)
+
+
+def compose_logfile(
+            source_path: str, target_path: str, intervals: Iterable[tuple[int, int]],
+            templog_folder_path: str):
+    """
+    Grabs bytes in given `intervals` from `source_path` and writes them to `target_path`.
+
+    Parameters:
+    - :param source_path: path to source file, must be absolute
+    - :param target_path: path to target file, must be absolute, will overwrite if it already exists
+    - :param intervals: iterable with start and end position pairs (half-open interval)
+    - :param templog_folder_path: path to folder used for temporary logfiles
+    """
+    tempfile_path = f'{templog_folder_path}\\{int(time())}'
+    with open(source_path, 'rb') as source_file, open(tempfile_path, 'wb') as temp_file:
+        for start_pos, end_pos in intervals:
+            source_file.seek(start_pos)
+            temp_file.write(source_file.read(end_pos - start_pos))
+    shutil.copyfile(tempfile_path, target_path)
 
 
 def repair_logfile(path: str, templog_folder_path: str):
@@ -242,8 +265,6 @@ def repair_logfile(path: str, templog_folder_path: str):
     - :param path: logfile to repair
     """
     patches = ((b'Rehona, Sister of the Qowat Milat', b'Rehona - Sister of the Qowat Milat'),)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Path to logfile doesn't exist: {path}")
     tempfile_path = f'{templog_folder_path}\\{int(time())}'
     with open(path, 'rb') as log_file, open(tempfile_path, 'wb') as temp_file:
         for line in log_file:
