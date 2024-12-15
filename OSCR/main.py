@@ -29,7 +29,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.15.1"
+    version = "2024.12.15.2"
 
     def __init__(self, log_path: str = '', settings: dict = None):
         self.log_path = log_path
@@ -165,8 +165,7 @@ class OSCR:
             if log_consumed:
                 if len(current_combat.log_data) >= 20:
                     current_combat.start_time = log_time
-                    current_combat.file_pos[1] = backwards_file.filesize - (
-                            backwards_file.get_bytes_read(True) + offset)
+                    current_combat.file_pos[0] = 0
                     combat_handler(current_combat)
                 new_offset = -1
         except BaseException as e:
