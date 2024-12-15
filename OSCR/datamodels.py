@@ -132,6 +132,36 @@ class OverviewTableRow:
             raise IndexError()
         return getattr(self, self.__slots__[position])
 
+    def to_dict(self):
+        return {
+            "DPS": self.DPS,
+            "name": self.name,
+            "deaths": self.deaths,
+            "debuff": self.debuff,
+            "handle": self.handle,
+            "misses": self.misses,
+            "crit_num": self.crit_num,
+            "heal_num": self.heal_num,
+            "heal_share": self.heal_share,
+            "combat_time": self.combat_time,
+            "crit_chance": self.crit_chance,
+            "max_one_hit": self.max_one_hit,
+            "total_heals": self.total_heals,
+            "damage_share": self.damage_share,
+            "hull_attacks": self.hull_attacks,
+            "total_damage": self.total_damage,
+            "heal_crit_num": self.heal_crit_num,
+            "total_attacks": self.total_attacks,
+            "attacks_in_num": self.attacks_in_num,
+            "attacks_in_share": self.attacks_in_share,
+            "heal_crit_chance": self.heal_crit_chance,
+            "taken_damage_share": self.taken_damage_share,
+            "total_damage_taken": self.total_damage_taken,
+            "total_hull_damage_taken": self.total_hull_damage_taken,
+            "total_shield_damage_taken": self.total_shield_damage_taken,
+            "build": self.build,
+        }
+
 
 class AnalysisTableRow():
     """

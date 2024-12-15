@@ -110,6 +110,11 @@ class Combat:
     def create_overview_graphs(self, player: OverviewTableRow, combat_interval: tuple[int, int]):
         """
         creates overview graphs from damage graph
+
+        Parameters:
+        - :param player: player to create graphs for
+        - :param combat_interval: first and last graph point of the respective player (a graph
+        point is an interval of length `graph_resolution` counted from the beginning of the log)
         """
         graph = self.overview_graphs[player.handle]
         player.DMG_graph_data = dmg_graph = graph[combat_interval[0]:combat_interval[1] + 1]
@@ -119,16 +124,21 @@ class Combat:
         combat_time_array = player.graph_time - self.graph_resolution * combat_interval[0]
         player.DPS_graph_data = dmg_graph.cumsum() / combat_time_array
 
-    def create_overview(self, overview_graph_intervals: dict[str, float]):
+    def create_overview(self, overview_graph_intervals: dict[str, tuple[int, int]]):
         """
         Creates overview table from analysis data and overview graphs from self.overiew_graphs and
         creates players with that data in self.players
+
+        Parameters:
+        - :overview_graph_intervals: maps player handles to their active combat start and end times
+        measured in graph points (1 / graph_resolution points per second of the log)
         """
         combat_duration = (self.end_time - self.start_time).total_seconds()
         total_damage_out = 0
         total_attacks_in = 0
         total_damage_in = 0
         total_heals = 0
+        # build_detection_abilities = tuple(Detection.BUILD_DETECTION_ABILITIES.keys())
 
         for player_item in self.damage_out._player._children:
             dmg_out_data = player_item.data
@@ -169,7 +179,18 @@ class Combat:
                 player.heal_num = heal_out_data[9]
             if player.handle in overview_graph_intervals:
                 self.create_overview_graphs(player, overview_graph_intervals[player.handle])
-            self.players[''.join(player_name_handle_id)] = player
+            # +++ Currently not used +++
+            # build = 'Unknown'
+            # for ability_item in player_item._children:
+            #     ability_name = ability_item.data[0]
+            #     for detection_ability in build_detection_abilities:
+            #         if detection_ability in ability_name:
+            #             build = Detection.BUILD_DETECTION_ABILITIES[detection_ability]
+            #             break
+            #     if build != 'Unknown':
+            #         break
+            # player.build = build
+            self.players[player_name_handle_id[0] + player_name_handle_id[1]] = player
 
         for player in self.players.values():
             try:
