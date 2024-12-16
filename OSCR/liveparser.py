@@ -141,7 +141,10 @@ class LiveParser():
                 'kills': player_data['kills'],
                 'deaths': player_data['deaths']
             }
-        player_combat_duration = max(last_player_attacks) - min(first_player_attacks)
+        if len(first_player_attacks) > 0:
+            player_combat_duration = max(last_player_attacks) - min(first_player_attacks)
+        else:
+            player_combat_duration = 0
         self.update_callback(output, player_combat_duration)
 
     def analyze(self):
