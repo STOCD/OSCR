@@ -79,7 +79,7 @@ class Combat:
             'detection_info': None  # iterable of DetectionInfo
         }
         self.players: dict[str, OverviewTableRow] = dict()
-        self.critters: dict = dict()
+        self.critters: dict[str, CritterMeta] = dict()
         self.critter_meta: dict = dict()
         self.graph_resolution = graph_resolution
         self.overview_graphs: dict = dict()
@@ -349,6 +349,7 @@ class Combat:
                 critters[entity_name].add_critter(entity.data[2])
             else:
                 critters[entity_name] = CritterMeta(entity_name, 1, [entity.data[2]])
+        self.critters = critters
 
         # contains multiple values when multiple entities identify the same map
         map_identificators = critters.keys() & Detection.MAP_IDENTIFIERS_EXISTENCE.keys()
