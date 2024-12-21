@@ -9,15 +9,10 @@ from .combat import Combat
 from .constants import BANNED_ABILITIES
 from .datamodels import LogLine, TreeItem
 from .detection import Detection
+from .iofunc import extract_bytes, reset_temp_folder
 from .oscr_read_file_backwards import ReadFileBackwards
-from .iofunc import extract_bytes, get_combat_log_data, reset_temp_folder, split_log_by_lines
 from .parser import analyze_combat
 from .utilities import datetime_to_display, get_entity_name, to_datetime
-
-
-ignored_abilities = [
-    "Electrical Overload",
-]
 
 
 def _f(*args, **kwargs):
@@ -29,7 +24,8 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.21.1"
+    version = "2024.12.21.2"
+    __version__ = '1.0'
 
     def __init__(self, log_path: str = '', settings: dict = None):
         self.log_path = log_path
@@ -42,18 +38,10 @@ class OSCR:
             "seconds_between_combats": 100,
             "excluded_event_ids": ["Autodesc.Combatevent.Falling"],
             "graph_resolution": 0.2,
-            "split_log_after": 480000,
             "templog_folder_path": f"{os.path.dirname(os.path.abspath(__file__))}/~temp_log_files",
         }
         self._pool = None
         self._queue = None
-        self._running = Event()
-
-        # old
-        self.combats_pointer = None
-        self.excess_log_lines = list()
-        self.combatlog_tempfiles = list()
-        self.combatlog_tempfiles_pointer = None
 
         if settings is not None:
             self._settings.update(settings)
@@ -78,36 +66,6 @@ class OSCR:
                 res.append(f"{c.map} {datetime_to_display(c.start_time)}")
         return res
 
-    @property
-    def active_combat(self):
-        """
-        Combat currently active (selected).
-        """
-        if self.combats_pointer is not None:
-            return self.combats[self.combats_pointer]
-        else:
-            return None
-
-    @property
-    def navigation_up(self) -> bool:
-        """
-        Indicates whether newer combats are available, but not yet analyzed.
-        """
-        if self.combatlog_tempfiles_pointer is None:
-            return False
-        return self.combatlog_tempfiles_pointer < len(self.combatlog_tempfiles) - 1
-
-    @property
-    def navigation_down(self) -> bool:
-        """
-        Indicates whether older combats are available, but not yet analyzed.
-        """
-        if len(self.excess_log_lines) > 0:
-            return True
-        if self.combatlog_tempfiles_pointer is None:
-            return False
-        return self.combatlog_tempfiles_pointer > 0
-
     def reset_parser(self):
         """
         Resets the parser to default state. Removes stored combats, logfile data and log path.
@@ -122,6 +80,24 @@ class OSCR:
             log_path: str, total_combats: int, first_combat_id: int, offset: int, settings: dict,
             combat_handler: Callable[[Combat], None] = _f,
             error_handler: Callable[[BaseException], None] = raise_error):
+        """
+        (Internal Function) Reads a logfile, isolates combats and calls `combat_handler` for each
+        combat as soon as it has been found.
+
+        Parameters:
+        - :param log_path: log path to be analyzed; overwrites `self.log_path`
+        - :param total_combats: stops isolating combats when combat id reaches `total_combats`
+        - :param first_combat_id: id that the first found combat gets; id is incremented per combat
+        - :param offset: offset in bytes from the end of the logfile
+        - :param settings: contains settings for parser; uses keys "seconds_between_combats" and
+        "graph_resolution"
+        - :param combat_handler: Called once for each analyzed combat as soon as the combats
+        analyzation is complete
+        - :param error_handler: Called when an error occurs during logfile analyzation
+
+        :return: -1 if entire file has been consumed; otherwise next byte to analyze counted from
+        the end of the file
+        """
         combat_delta = timedelta(seconds=settings['seconds_between_combats'])
         combat_id = first_combat_id
         current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
@@ -229,7 +205,6 @@ class OSCR:
         - :param result_handler: Called once for each analyzed combat as soon as the combats
         analyzation is complete
         """
-        print('analyze MP')
         if log_path != '':
             self.log_path = log_path
         elif self.log_path == '':
@@ -276,139 +251,28 @@ class OSCR:
 
     @staticmethod
     def _analyze_file_helper(queue, log_path, total_combats, first_combat_id, offset, settings):
+        """
+        Helper method to put return value of function into queue to be sent to main process. Wraps
+        `_analyze_log_file`.
+        """
         queue.put(OSCR._analyze_log_file(
                 log_path, total_combats, first_combat_id, offset, settings,
                 lambda combat: queue.put(combat), lambda error: queue.put(error)))
 
     def analyze_new_combat(self, combat: Combat):
+        """
+        Analyzes isolated combat, puts it into `self.combats` and calls the combat analyzed callback
+        """
         analyze_combat(combat)
         self.combats[combat.id] = combat
         self.combat_analyzed_callback(combat)
 
     def handle_analyzed_result(self, result_combat: Combat):
+        """
+        puts analyzed combat into `self.combats` and calls the combat analyzed callback
+        """
         self.combats[result_combat.id] = result_combat
         self.combat_analyzed_callback(result_combat)
-
-    def analyze_log_file_old(self, total_combats=None, extend=False, log_path=None):
-        """
-        Analyzes the combat at self.log_path and replaces self.combats with the newly parsed
-        combats.
-
-        Parameters:
-        - :param total_combats: holds the number of combats that should be in self.combats after
-        the method is finished.
-        - :param extend: extends the list of current combats to match the number of total_combats
-        by analyzing excess_log_lines
-        - :param log_path: specify log path different from self.log_path to be analyzed. Has no
-        effect when parameter extend is True
-        """
-        if self.log_path is None and log_path is None:
-            raise AttributeError(
-                '"self.log_path" or parameter "log_path" must contain a path to a log file.'
-            )
-        if total_combats is None:
-            total_combats = self._settings["combats_to_parse"]
-        if extend:
-            if total_combats <= len(self.combats):
-                return
-            log_lines = self.excess_log_lines
-            self.excess_log_lines = list()
-        else:
-            if log_path is not None:
-                log_lines = get_combat_log_data(log_path)
-            else:
-                log_lines = get_combat_log_data(self.log_path)
-            log_lines.reverse()
-            self.combats = list()
-            self.excess_log_lines = list()
-
-        # Remove blank lines from beginning of the log.
-        while True:
-            if log_lines[0] == "\n":
-                log_lines = log_lines[1:]
-            else:
-                break
-
-        combat_delta = timedelta(seconds=self._settings["seconds_between_combats"])
-        last_log_time = to_datetime(log_lines[0].split("::")[0]) + 2 * combat_delta
-        current_combat = Combat(self._settings["graph_resolution"])
-
-        try:
-            for line_num, line in enumerate(log_lines):
-                # Some Old logs from SCM have blank lines. Skip them.
-                if line == "\n":
-                    continue
-
-                if "Rehona, Sister of the Qowat Milat" in line:
-                    continue
-
-                time_data, attack_data = line.split("::")
-                splitted_line = attack_data.split(",")
-
-                skip = False
-                for ability in ignored_abilities:
-                    if ability == splitted_line[6]:
-                        print(
-                            f"Detected ignored abilitiy {ability}, {splitted_line} skipping line"
-                        )
-                        skip = True
-                        break
-
-                if skip:
-                    continue
-
-                log_time = to_datetime(time_data)
-                if last_log_time - log_time > combat_delta:
-                    if len(current_combat.log_data) >= 20:
-                        current_combat.start_time = last_log_time
-                        # analyze_combat(current_combat, self._settings)
-                        self.combats.append(current_combat)
-                    current_combat = Combat(self._settings["graph_resolution"])
-                    if len(self.combats) >= total_combats:
-                        self.excess_log_lines = log_lines[line_num:]
-                        return
-                current_line = LogLine(
-                    log_time,
-                    *splitted_line[:10],
-                    float(splitted_line[10]),
-                    float(splitted_line[11]),
-                )
-                last_log_time = log_time
-                current_combat.log_data.appendleft(current_line)
-                current_combat.analyze_last_line()
-                if not current_combat.end_time:
-                    current_combat.end_time = last_log_time
-        except Exception:
-            raise Exception(f"Failed to read log with line: {line_num} \n\n{line}")
-        except ValueError:
-            raise Exception(f"Failed to read log with line: {line_num} \n\n{line}")
-
-        current_combat.start_time = last_log_time
-        # analyze_combat(current_combat, self._settings)
-        self.combats.append(current_combat)
-
-    def analyze_massive_log_file(self, total_combats=None):
-        """
-        Analyzes the combat at self.log_path and replaces self.combats with the newly parsed
-        combats. Used to analyze log files larger than around 500000 lines. Wraps around
-        self.analyze_log_file.
-
-        Parameters:
-        - :param total_combats: holds the number of combats that should be in self.combats after
-        the method is finished.
-        """
-        if self.log_path is None:
-            raise AttributeError('"self.log_path" must contain a path to a log file.')
-        temp_folder_path = self._settings["templog_folder_path"]
-        reset_temp_folder(temp_folder_path)
-        self.combatlog_tempfiles = split_log_by_lines(
-            self.log_path, temp_folder_path, approx_lines_per_file=480000
-        )
-        self.combatlog_tempfiles_pointer = len(self.combatlog_tempfiles) - 1
-        self.analyze_log_file_old(
-            total_combats,
-            log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer],
-        )
 
     def isolate_combats(self, path: str, max_combats: int = -1) -> list[tuple]:
         """
@@ -477,74 +341,8 @@ class OSCR:
             else:
                 e.args = (*e.args, 'Error before loop!')
             self.error_callback(e)
-            return []
+            return tuple()
         return combats
-
-    def navigate_log(self, direction: str = "down"):
-        """
-        Analyzes earlier combats when direction is "down"; loads earlier templog file if current
-        file is exhausted; loads later combatlog file if direction is "up".
-
-        Parameters:
-        - :param direction: "down" and "up"
-
-        :return: True when logfile was changed; False otherwise
-        """
-        if direction == "down" and self.navigation_down:
-            if self.combatlog_tempfiles_pointer is None:
-                total_combat_num = (
-                    len(self.combats) + self._settings["combats_to_parse"]
-                )
-                self.analyze_log_file_old(total_combats=total_combat_num, extend=True)
-                return False
-            else:
-                self.combatlog_tempfiles_pointer -= 1
-                self.analyze_log_file_old(
-                    log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer]
-                )
-                return True
-        elif direction == "up" and self.navigation_up:
-            self.combatlog_tempfiles_pointer += 1
-            self.analyze_log_file_old(
-                log_path=self.combatlog_tempfiles[self.combatlog_tempfiles_pointer]
-            )
-            return True
-
-    # def shallow_combat_analysis(self, combat_num: int) -> tuple[list, ...]:
-    #     '''
-    #     Analyzes combat from currently available combats in self.combat.
-
-    #     Parameters:
-    #     - :param combat_num: index of the combat in self.combats
-
-    #     :return: tuple containing the overview table, DPS graph data and DMG graph data
-    #     '''
-    #     try:
-    #         combat = self.combats[combat_num]
-    #         combat.analyze_shallow(graph_resolution=self._settings['graph_resolution'])
-    #         self.combats_pointer = combat_num
-    #     except IndexError:
-    #         raise AttributeError(
-    #                 f'Combat #{combat_num} you are trying to analyze has not been isolated yet. '
-    #                 f'Number of isolated combats: {len(self.combats)} -- Use '
-    #                 'OSCR.analyze_log_file() with appropriate arguments first.')
-
-    def full_combat_analysis(self, combat_num: int) -> tuple[TreeItem]:
-        """
-        Analyzes combat
-        """
-        try:
-            combat = self.combats[combat_num]
-            self.combats_pointer = combat_num
-        except IndexError:
-            raise AttributeError(
-                f"Combat #{combat_num} you are trying to analyze has not been isolated yet."
-                f"Number of isolated combats: {len(self.combats)} -- Use "
-                "OSCR.analyze_log_file() with appropriate arguments first."
-            )
-        # dmg_out, dmg_in, heal_out, heal_in = analyze_combat(combat, self._settings)
-        return analyze_combat(combat, self._settings)
-        # return dmg_out._root, dmg_in._root, heal_out._root, heal_in._root
 
     def export_combat(self, combat_num: int, path: str):
         """

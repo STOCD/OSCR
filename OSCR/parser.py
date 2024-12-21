@@ -1,15 +1,14 @@
 import numpy
-import time
 from datetime import datetime
 
-from .constants import TREE_HEADER, HEAL_TREE_HEADER
-from .datamodels import (
-    AnalysisTableRow, DamageTableRow, HealTableRow, LogLine, OverviewTableRow, TreeItem, TreeModel)
 from .combat import Combat
+from .constants import HEAL_TREE_HEADER, TREE_HEADER
+from .datamodels import (
+    AnalysisTableRow, DamageTableRow, HealTableRow, LogLine, TreeItem, TreeModel)
 from .utilities import bundle, get_handle_from_id, get_player_handle, to_microseconds
 
 
-def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
+def analyze_combat(combat: Combat) -> Combat:
     """
     Fully analyzes the given combat and returns it.
     """
@@ -180,7 +179,7 @@ def analyze_combat(combat: Combat, settings: dict = {}) -> Combat:
 def get_outgoing_target_row(
         tree_model: TreeModel, line: LogLine, player_attacks: bool, row_constructor,
         parse_duration: int) -> tuple[TreeItem, DamageTableRow | HealTableRow]:
-    '''
+    """
     Adds the needed parents to the tree model and returns the newly created or already existing
     data row. Also updates combat time of the actor.
 
@@ -191,7 +190,7 @@ def get_outgoing_target_row(
     - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
     :return: reference to newly created or existing data row
-    '''
+    """
     attacker_id = (line.owner_id,)
     attacker_handle = get_handle_from_id(line.owner_id)
     if attacker_id in tree_model.actor_index:
@@ -240,7 +239,7 @@ def get_incoming_target_row(
         tree_model: TreeModel, line: LogLine, player_attacked: bool,
         row_constructor: AnalysisTableRow,
         parse_duration: int) -> tuple[TreeItem, DamageTableRow | HealTableRow]:
-    '''
+    """
     Adds the needed parents to the tree model and returns the newly created or already existing
     data row. Also updates combat time of the actor.
 
@@ -251,8 +250,8 @@ def get_incoming_target_row(
     - :param row_constructor: a new object returned by this constructor will hold the row data
     - :param parse_duration: seconds between the first and last line of the combat, rounded up
 
-    :return: reference to newly created or existing TreItem and data row
-    '''
+    :return: reference to newly created or existing TreeItem and data row
+    """
     target_id = (line.target_id,)
     target_handle = get_handle_from_id(line.target_id)
     if target_id in tree_model.actor_index:
@@ -288,11 +287,11 @@ def get_incoming_target_row(
 
 
 def get_flags(flag_str: str) -> tuple[bool]:
-    '''
+    """
     Returns flags from flag field of log line.
 
-    Return: (critical_hit, miss, flank, kill, shield_break)
-    '''
+    :return: (critical_hit, miss, flank, kill, shield_break)
+    """
     critical_hit = 'Critical' in flag_str
     miss = 'Miss' in flag_str
     flank = 'Flank' in flag_str
@@ -303,7 +302,7 @@ def get_flags(flag_str: str) -> tuple[bool]:
 
 
 def calculate_damage_row_stats(row: DamageTableRow, combat_time: float) -> tuple:
-    '''
+    """
     Calculates combat stats from raw stats taken from the parse, for example DPS from damage and
     combat time.
 
@@ -313,7 +312,7 @@ def calculate_damage_row_stats(row: DamageTableRow, combat_time: float) -> tuple
 
     :return: complete row data according to TREE_HEADER (see __init__.py), plus a tuple containing
     name and handle as first element -> ((name, handle), DPS, Total Damage, ...)
-    '''
+    """
     successful_attacks = row.hull_attacks - row.misses
     try:
         dps = row.total_damage / combat_time
@@ -346,7 +345,7 @@ def calculate_damage_row_stats(row: DamageTableRow, combat_time: float) -> tuple
 
 
 def calculate_heal_row_stats(row: HealTableRow, combat_time: float) -> tuple:
-    '''
+    """
     Calculates combat stats from raw stats taken from the parse, for example HPS from Heal and
     combat time.
 
@@ -356,7 +355,7 @@ def calculate_heal_row_stats(row: HealTableRow, combat_time: float) -> tuple:
 
     :return: complete row data according to HEAL_TREE_HEADER (see constants.py), plus a tuple
     containing name and handle as first element -> ((name, handle), HPS, Total Heal, ...)
-    '''
+    """
     try:
         hps = row.total_heal / combat_time
         shield_hps = row.shield_heal / combat_time
@@ -375,15 +374,15 @@ def calculate_heal_row_stats(row: HealTableRow, combat_time: float) -> tuple:
             combat_time, row.hull_heal_ticks, row.shield_heal_ticks)
 
 
-def combine_children_damage_stats(item: TreeItem) -> tuple:
-    '''
+def combine_children_damage_stats(item: TreeItem):
+    """
     Combines the stats of the children items intelligently. Absolute numbers are summed,
     percentages are averaged.
 
     Parameters:
     - :param item: item to retrieve children data from; item.data must be string containing the
     ability name
-    '''
+    """
     children_data = tuple(zip(*item._children))
     result_data = [None] * 22
     combat_time = result_data[19] = children_data[19][0]
@@ -420,15 +419,15 @@ def combine_children_damage_stats(item: TreeItem) -> tuple:
     item.data = tuple(result_data)
 
 
-def combine_children_heal_stats(item: TreeItem) -> tuple:
-    '''
+def combine_children_heal_stats(item: TreeItem):
+    """
     Combines the stats of the children items intelligently. Absolute numbers are summed,
     percentages are averaged.
 
     Parameters:
     - :param item: item to retrieve children data from; item.data must be string containing the
     ability name
-    '''
+    """
     children_data = tuple(zip(*item._children))
     result_data = [None] * 14
     combat_time = result_data[11] = children_data[11][0]
@@ -455,7 +454,7 @@ def combine_children_heal_stats(item: TreeItem) -> tuple:
 
 
 def merge_single_lines(tree_model: TreeModel):
-    '''
+    """
     Eliminates one level of depth if needed by merging lines that only have a single child. For
     example:
 
@@ -473,7 +472,7 @@ def merge_single_lines(tree_model: TreeModel):
 
     Parameters:
     - :param tree_model: tree model to analyze and improve
-    '''
+    """
     for player in tree_model._player._children:
         new_pet_groups = dict()
 
@@ -510,12 +509,12 @@ def merge_single_lines(tree_model: TreeModel):
 
 
 def complete_damage_sub_tree(item: TreeItem, combat_time):
-    '''
+    """
     Recursive function merging data from the bottom up.
 
     Parameters:
     - :param item: item to complete
-    '''
+    """
     graph_data = list()
     for child in item._children:
         if child.child_count == 0:
@@ -528,12 +527,12 @@ def complete_damage_sub_tree(item: TreeItem, combat_time):
 
 
 def complete_heal_sub_tree(item: TreeItem, combat_time):
-    '''
+    """
     Recursive function merging data from the bottom up.
 
     Parameters:
     - :param item: item to complete
-    '''
+    """
     graph_data = list()
     for child in item._children:
         if child.child_count == 0:
@@ -547,13 +546,13 @@ def complete_heal_sub_tree(item: TreeItem, combat_time):
 
 def complete_damage_tree(
         tree_model: TreeModel, combat_durations: dict, total_combat_duration: float):
-    '''
+    """
     Merges the data from the bottom up to fill all lines.
 
     Parameters:
     - :param tree_model: tree model to be completed
     - :param combat_durations: combat durations for all actors
-    '''
+    """
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
         current_combat_time = combat_durations.get(actor.data.id[0], total_combat_duration)
         actor.data.combat_time = current_combat_time
@@ -561,13 +560,13 @@ def complete_damage_tree(
 
 
 def complete_heal_tree(tree_model: TreeModel, combat_durations: dict, total_combat_duration: float):
-    '''
+    """
     Merges the data from the bottom up to fill all lines.
 
     Parameters:
     - :param tree_model: tree model to be completed
     - :param combat_durations: combat durations for all actors
-    '''
+    """
     for actor in bundle(tree_model._player._children, tree_model._npc._children):
         current_combat_time = combat_durations.get(actor.data.id[0], total_combat_duration)
         actor.data.combat_time = current_combat_time

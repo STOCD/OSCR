@@ -30,11 +30,25 @@ class CritterMeta:
     __slots__ = ('name', 'count', 'hull_values')
 
     def __init__(self, name: str, initial_count: int = 0, initial_hull_values: list = []):
+        """
+        Represents one NPC type in a combat
+
+        Parameters:
+        - :param name: name of the entity
+        - :param initial_count: current count of the entity at time of creation
+        - :param initial_hull_values: already determined hull values
+        """
         self.name = name
         self.count = initial_count
         self.hull_values = initial_hull_values
 
     def add_critter(self, hull_value: int):
+        """
+        Adds an entity to the meta
+
+        Parameters:
+        - :param hull_value: amount of hull damage this entity suffered
+        """
         self.count += 1
         self.hull_values.append(hull_value)
 
@@ -54,6 +68,20 @@ class DetectionInfo:
     def __init__(
             self, success: bool, type: str = '', identificators: tuple = (), target_value: int = 0,
             retrieved_value: int = 0, step: str = '', map=None, difficulty=None):
+        """
+        Stores information on the detection process.
+
+        Parameters:
+        - :param success: True if this step successfully detected a map
+        - :param type: "map"/"difficulty"/"both" depending on what the step detected
+        - :param identificators: NPCs that were used to identfy the combat or that the detection \
+        failed on
+        - :param target_value: value that had to be reached for a successful detection
+        - :param retrieved_value: value that was determined from the data
+        - :param step: "existence"/"deaths"/"damage" depending on the detection method
+        - :param map: detected map
+        - :param difficulty: detected difficulty
+        """
         self.success = success
         self.type = type
         self.identificators = identificators
