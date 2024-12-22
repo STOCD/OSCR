@@ -24,7 +24,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.21.2"
+    version = "2024.12.22.1"
     __version__ = '1.0'
 
     def __init__(self, log_path: str = '', settings: dict = None):

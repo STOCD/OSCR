@@ -26,9 +26,9 @@ def format_overview_row(row: OverviewTableRow):
         f'{row.total_damage:,.2f}',
         f'{row.debuff * 100:.2f}%',
         f'{row.attacks_in_share * 100:.2f}%',
-        f'{row.taken_damage_share:.2f}%',
+        f'{row.taken_damage_share * 100:.2f}%',
         f'{row.damage_share * 100:.2f}%',
-        f'{row.max_one_hit * 100:.2f}%',
+        f'{row.max_one_hit:,.2f}',
         f'{row.deaths}',
     )
 
