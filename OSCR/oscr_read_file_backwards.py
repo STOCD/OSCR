@@ -80,7 +80,9 @@ class ReadFileBackwards():
 
     def __enter__(self):
         self._file = open_logfile(self._path)
-        self.filesize = os.fstat(self._file.fileno()).st_size
+        self._file.seek(0, os.SEEK_END)
+        self.filesize = self._file.tell()
+        self._file.seek(0, os.SEEK_SET)
         self._position = self._file.seek(self.filesize - self._offset)
         self._lines = self._get_first_chunk()
         self._iter_counter = 0
