@@ -1,4 +1,4 @@
-""" Combat Detection Methods """
+"""Combat Detection Methods"""
 
 from .datamodels import LogLine
 from .utilities import get_entity_name
