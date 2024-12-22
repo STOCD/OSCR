@@ -5,66 +5,89 @@ import cProfile
 import os
 import pstats
 
-import numpy
+from . import OSCR
+from .datamodels import OverviewTableRow
 
-import OSCR
+
+OVERVIEW_HEADER = (
+        'Player', 'DPS', 'Combat Time', 'Combat Time Share', 'Total Damage', 'Debuff',
+        'Attacks-in Share', 'Taken Damage Share', 'Damage Share', 'Max One Hit', 'Deaths')
 
 
-def list_combats(parser):
+def format_overview_row(row: OverviewTableRow):
+    """
+    Returns a list of formatted column values from OverviewTableRow
+    """
+    return (
+        row.name + row.handle,
+        f'{row.DPS:,.2f}',
+        f'{row.combat_time:.1f}s',
+        f'{row.combat_time_share * 100:.2f}%',
+        f'{row.total_damage:,.2f}',
+        f'{row.debuff * 100:.2f}%',
+        f'{row.attacks_in_share * 100:.2f}%',
+        f'{row.taken_damage_share * 100:.2f}%',
+        f'{row.damage_share * 100:.2f}%',
+        f'{row.max_one_hit:,.2f}',
+        f'{row.deaths}',
+    )
+
+
+def list_combats(parser: OSCR):
     """List the parsed combats but do not do any analysis"""
-    for combat in parser.combats:
-        print(
-            f"start={combat.start_time} end={combat.end_time} duration={combat.duration} "
-            "map={combat.map} difficulty={combat.difficulty}"
-        )
+    combats = parser.isolate_combats(parser.log_path)
+    for combat in combats:
+        print(f"<{combat[1]} {combat[4] + ' ' if combat[4] else ''}at {combat[2]} {combat[3]}>")
+    print("++++++++++++++++++++++++++++++++")
 
 
-def shallow(args, parser):
+def analyzation(args, parser: OSCR):
     """Print the combat summary for each combat"""
-    for idx, _ in enumerate(parser.analyzed_combats):
-        parser.full_combat_analysis(idx)
-        combat = parser.active_combat
-        print(
-            f"start={combat.start_time} end={combat.end_time} duration={combat.duration} map={combat.map} difficulty={combat.difficulty}"
-        )
-
-        print("  Players (Damage)")
-        for k, v in parser.active_combat.player_dict.items():
-            print(f"    {v.name}{v.handle}: damage={v.total_damage:,.0f} dps={v.DPS:,.0f} build={v.build}")
-
+    parser.analyze_log_file(max_combats=args.count)
+    for combat in parser.combats:
+        print("++++++++++++++++++++++++++++++++")
+        print(f"###   {combat.description}   ###")
         if args.metadata:
-            print("  Computers:")
-            for k, v in parser.active_combat.critter_meta.items():
-                if v["deaths"] == 0:
-                    continue
-                perc = numpy.percentile(v["total_hull_damage_taken"], 50)
-                print(f"    {k}: count={v['count']} deaths={v['deaths']} hull={perc:.0f}")
-
-        if args.events:
-            print(" Events (Players)")
-            for k, v in parser.active_combat.player_dict.items():
-                print(f"    {v.name}{v.handle}:")
-                for event in v.events:
-                    print(f"      {event}")
+            print(f"Start Time: {combat.start_time} | End Time: {combat.end_time}")
+            print(
+                    f"Log Duration: {combat.meta['log_duration']}s | "
+                    f"Active Player Time: {combat.meta['player_duration']}s")
+            print(', '.join(f'[{c.name} count={c.count}]' for c in combat.critters.values()))
+        if args.analysis:
+            player_data = [OVERVIEW_HEADER]
+            paddings = list(map(len, OVERVIEW_HEADER))
+            for player in combat.players.values():
+                formatted_row = format_overview_row(player)
+                player_data.append(formatted_row)
+                paddings = [max(e1, e2) for e1, e2 in zip(paddings, map(len, formatted_row))]
+            print("###         Analysis         ###")
+            for row in player_data:
+                print(' | '.join(f'{el:>{pad}}' for el, pad in zip(row, paddings)))
 
 
 def main():
     """Main"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input")
-    parser.add_argument("-l", "--list", action=argparse.BooleanOptionalAction)
-    parser.add_argument("-s", "--shallow", action=argparse.BooleanOptionalAction)
-    parser.add_argument("-m", "--metadata", action=argparse.BooleanOptionalAction)
-    parser.add_argument("-e", "--events", action=argparse.BooleanOptionalAction)
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("-i", "--input", default='')
+    argparser.add_argument("-c", "--count", type=int, default=1)
+    argparser.add_argument("-l", "--list", action=argparse.BooleanOptionalAction)
+    argparser.add_argument("-m", "--metadata", action=argparse.BooleanOptionalAction)
+    argparser.add_argument("-a", "--analysis", action=argparse.BooleanOptionalAction)
+    args = argparser.parse_args()
+    if args.input == '':
+        print(
+                'OSCR CLI Options:\n--input / -i: logfile path (mandatory)\n--list / -l: list all '
+                'combats in logfile\n--count / -c: number of combats to analyze (for use with -m '
+                'and -a)\n--metadata / -m: shows metadata of combats\n--analysis / -a: show combat '
+                'analysis overview')
+        return
 
-    parser = OSCR.OSCR(args.input)
-    parser.analyze_log_file()
+    parser = OSCR(args.input)
 
     if args.list:
         list_combats(parser)
-    if args.shallow or args.metadata:
-        shallow(args, parser)
+    elif args.analysis or args.metadata:
+        analyzation(args, parser)
 
 
 if __name__ == "__main__":

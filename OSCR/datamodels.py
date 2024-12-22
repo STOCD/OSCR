@@ -1,5 +1,3 @@
-from typing import Optional, Iterable
-from datetime import datetime
 from collections import namedtuple
 
 import numpy
@@ -24,16 +22,102 @@ LogLine = namedtuple(
 )
 
 
+class CritterMeta:
+    """
+    Represents one npc type in a combat.
+    """
+
+    __slots__ = ('name', 'count', 'hull_values')
+
+    def __init__(self, name: str, initial_count: int = 0, initial_hull_values: list = []):
+        """
+        Represents one NPC type in a combat
+
+        Parameters:
+        - :param name: name of the entity
+        - :param initial_count: current count of the entity at time of creation
+        - :param initial_hull_values: already determined hull values
+        """
+        self.name = name
+        self.count = initial_count
+        self.hull_values = initial_hull_values
+
+    def add_critter(self, hull_value: int):
+        """
+        Adds an entity to the meta
+
+        Parameters:
+        - :param hull_value: amount of hull damage this entity suffered
+        """
+        self.count += 1
+        self.hull_values.append(hull_value)
+
+    def __repr__(self):
+        return f'<CritterMeta "{self.name}">'
+
+
+class DetectionInfo:
+    """
+    Stores information on the detection process
+    """
+
+    __slots__ = (
+            'success', 'type', 'identificators', 'target_value', 'retrieved_value', 'step',
+            'map', 'difficulty')
+
+    def __init__(
+            self, success: bool, type: str = '', identificators: tuple = (), target_value: int = 0,
+            retrieved_value: int = 0, step: str = '', map=None, difficulty=None):
+        """
+        Stores information on the detection process.
+
+        Parameters:
+        - :param success: True if this step successfully detected a map
+        - :param type: "map"/"difficulty"/"both" depending on what the step detected
+        - :param identificators: NPCs that were used to identfy the combat or that the detection \
+        failed on
+        - :param target_value: value that had to be reached for a successful detection
+        - :param retrieved_value: value that was determined from the data
+        - :param step: "existence"/"deaths"/"damage" depending on the detection method
+        - :param map: detected map
+        - :param difficulty: detected difficulty
+        """
+        self.success = success
+        self.type = type
+        self.identificators = identificators
+        self.target_value = target_value
+        self.retrieved_value = retrieved_value
+        self.step = step
+        self.map = map
+        self.difficulty = difficulty
+
+    def __repr__(self):
+        return f'<DetectionInfo success={self.success} type={self.type}>'
+
+    def __bool__(self):
+        return self.success
+
+
 class OverviewTableRow:
     '''
     Contains a single row of data
     '''
 
+    __slots__ = (
+            'name', 'handle', 'DPS', 'combat_time', 'combat_time_share', 'total_damage', 'debuff',
+            'attacks_in_share', 'taken_damage_share', 'damage_share', 'max_one_hit', 'crit_chance',
+            'deaths', 'total_heals', 'heal_share', 'heal_crit_chance', 'total_damage_taken',
+            'total_hull_damage_taken', 'total_shield_damage_taken', 'total_attacks',
+            'hull_attacks', 'attacks_in_num', 'heal_crit_num', 'heal_num', 'crit_num', 'misses',
+            'base_damage', 'DMG_graph_data', 'DPS_graph_data', 'graph_time', 'damage_buffer',
+            'combat_interval', 'events', 'build')
+
     def __init__(self, name: str, handle: str):
         self.name: str = name
         self.handle: str = handle
-        self.combat_time: float = 0.0
         self.DPS: float = 0.0
+        self.combat_time: float = 0.0
+        self.combat_time_share: float = 0.0
         self.total_damage: float = 0.0
         self.debuff: float = 0.0
         self.attacks_in_share: float = 0.0
@@ -69,44 +153,14 @@ class OverviewTableRow:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
 
     def __len__(self) -> int:
-        return 25
+        return 26
 
     def __getitem__(self, position):
-        entries = {
-            0: self.name,
-            1: self.handle,
-            2: self.combat_time,
-            3: self.DPS,
-            4: self.total_damage,
-            5: self.debuff,
-            6: self.attacks_in_share,
-            7: self.taken_damage_share,
-            8: self.damage_share,
-            9: self.max_one_hit,
-            10: self.crit_chance,
-            11: self.deaths,
-            12: self.total_heals,
-            13: self.heal_share,
-            14: self.heal_crit_chance,
-            15: self.total_damage_taken,
-            16: self.total_hull_damage_taken,
-            17: self.total_shield_damage_taken,
-            18: self.total_attacks,
-            19: self.hull_attacks,
-            20: self.attacks_in_num,
-            21: self.heal_crit_num,
-            22: self.heal_num,
-            23: self.crit_num,
-            24: self.misses,
-        }
+        if position >= 26:
+            raise IndexError()
+        return getattr(self, self.__slots__[position])
 
-        if position >= len(entries):
-            raise StopIteration()
-
-        return entries[position]
-
-    @property
-    def __dict__(self):
+    def to_dict(self):
         return {
             "DPS": self.DPS,
             "name": self.name,
@@ -147,10 +201,15 @@ class AnalysisTableRow():
 
 class DamageTableRow(AnalysisTableRow):
     """
-    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_damage,
-    max_one_hit, kills, total_attacks, misses, crit_num, flank_num, total_shield_damage,
-    total_hull_damage, total_base_damage, combat_time, hull_attacks, shield_attacks)
+    Contains a single row of data in the analysis table.
     """
+
+    __slots__ = (
+            'name', 'handle', 'total_damage', 'max_one_hit', 'kills', 'total_attacks', 'misses',
+            'crit_num', 'flank_num', 'total_shield_damage', 'total_hull_damage',
+            'total_base_damage', 'combat_time', 'hull_attacks', 'shield_attacks' 'id',
+            'combat_start', 'combat_end')
+
     def __init__(self, name: str, handle: str, id: str):
         """
         Parameters:
@@ -188,40 +247,15 @@ class DamageTableRow(AnalysisTableRow):
         self.combat_start: float = None
         self.combat_end: float = None
 
-    def __len__(self) -> int:
-        return 15
-
-    def __getitem__(self, position: int):
-        entries = {
-            0: self.name,
-            1: self.handle,
-            2: self.total_damage,
-            3: self.max_one_hit,
-            4: self.kills,
-            5: self.total_attacks,
-            6: self.misses,
-            7: self.crit_num,
-            8: self.flank_num,
-            9: self.total_shield_damage,
-            10: self.total_hull_damage,
-            11: self.total_base_damage,
-            12: self.combat_time,
-            13: self.hull_attacks,
-            14: self.shield_attacks,
-        }
-
-        if position >= len(entries):
-            raise StopIteration()
-
-        return entries[position]
-
 
 class HealTableRow(AnalysisTableRow):
     """
-    Contains a single row of data in the analysis table. Unpacks into: (name, handle, total_heal,
-    hull_heal, shield_heal, max_one_heal, heal_ticks, critical_heals, combat_time, hull_heal_ticks,
-    shield_heal_ticks)
+    Contains a single row of data in the analysis table.
     """
+    __slots__ = (
+            'name', 'handle', 'total_heal', 'hull_heal', 'shield_heal', 'max_one_heal',
+            'heal_ticks', 'critical_heals', 'combat_time', 'hull_heal_ticks', 'shield_heal_ticks',
+            'id', 'combat_start', 'combat_end')
 
     def __init__(self, name: str, handle: str, id: str):
         """
@@ -230,6 +264,7 @@ class HealTableRow(AnalysisTableRow):
         - :param handle: handle of the entity
         - :param id: id of the entity
         """
+
         # commented attributes represent additional fields in the final result, that are not
         # required here
         self.name: str = name if name else '*'
@@ -252,46 +287,23 @@ class HealTableRow(AnalysisTableRow):
         self.combat_start: float = None
         self.combat_end: float = None
 
-    def __len__(self) -> int:
-        return 11
-
-    def __getitem__(self, position: int):
-        entries = {
-            0: self.name,
-            1: self.handle,
-            2: self.total_heal,
-            3: self.hull_heal,
-            4: self.shield_heal,
-            5: self.max_one_heal,
-            6: self.heal_ticks,
-            7: self.critical_heals,
-            8: self.combat_time,
-            9: self.hull_heal_ticks,
-            10: self.shield_heal_ticks
-        }
-
-        if position >= len(entries):
-            raise StopIteration()
-
-        return entries[position]
-
 
 class TreeItem():
     """
     Item that contains data and children optionally.
     """
 
-    def __init__(self, data: Iterable, parent, parse_duration: int = 0):
+    def __init__(self, data: AnalysisTableRow | tuple, parent, parse_duration: int = 0):
         """
         Parameters:
-        - :param data: one-dimensional iterable containing the row data
+        - :param data: row data
         - :param parent: TreeItem that is the parent of this item
         - :param parse_duration: seconds between the first and last line of the combat, rounded up
         """
         self.data = data
         self.graph_data = numpy.zeros(parse_duration, numpy.float64)
-        self.parent = parent
-        self._children = list()
+        self.parent: TreeItem = parent
+        self._children: list[TreeItem] = list()
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: data={self.data}>'
@@ -338,7 +350,7 @@ class TreeModel():
 
     def __init__(self, header: tuple[str]):
         self.actor_index = dict()
-        self.ability_index = dict()
+        self.ability_index: dict[tuple, dict[str, TreeItem]] = dict()
         self.pet_group_index = dict()
         self.pet_index = dict()
         self.target_index = dict()

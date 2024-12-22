@@ -118,7 +118,7 @@ class Detection:
         "Snowman_Q_Boss_Msn_Snowglobe": {
             "map": "Winter Invasion",
             "difficulty": "Normal",
-        },
+        }
     }
 
     # Detect maps based on # of entities
