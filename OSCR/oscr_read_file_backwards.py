@@ -1,3 +1,4 @@
+import gzip
 import io
 import os
 
@@ -5,6 +6,14 @@ LINE_SEP_BYTES = bytes(os.linesep, 'utf-8')
 LINE_SEP = os.linesep
 _81920 = io.DEFAULT_BUFFER_SIZE * 10
 
+def is_gz_file(filepath):
+    with open(filepath, 'rb') as test_f:
+        return test_f.read(2) == b'\x1f\x8b'
+
+def open_logfile(filepath):
+    if is_gz_file(filepath):
+        return gzip.open(filepath, 'rb')
+    return open(filepath, 'rb')
 
 class ReadFileBackwards():
     """reads an utf-8 encoded text file and yields its lines backwards in a memory efficient way"""
@@ -70,7 +79,7 @@ class ReadFileBackwards():
         return self.filesize - self._position - not_consumed_bytes - self._offset
 
     def __enter__(self):
-        self._file = open(self._path, 'rb')
+        self._file = open_logfile(self._path)
         self.filesize = os.fstat(self._file.fileno()).st_size
         self._position = self._file.seek(self.filesize - self._offset)
         self._lines = self._get_first_chunk()
