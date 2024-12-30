@@ -1,3 +1,4 @@
+from gzip import open as gzip_open
 import os
 import shutil
 from time import time
@@ -27,6 +28,9 @@ def extract_bytes(source_path: str, target_path: str, start_pos: int, end_pos: i
     if not os.path.isabs(target_path):
         raise AttributeError(f'target_path is not absolute: {target_path}')
     with open(source_path, 'rb') as source_file:
+        if source_file.read(2) == b'\x1f\x8b':
+            source_file.close()
+            source_file = gzip_open(source_path, 'rb')
         source_file.seek(start_pos)
         extracted_bytes = source_file.read(end_pos - start_pos)
     with open(target_path, 'wb') as target_file:
@@ -47,6 +51,9 @@ def compose_logfile(
     """
     tempfile_path = f'{templog_folder_path}\\{int(time())}'
     with open(source_path, 'rb') as source_file, open(tempfile_path, 'wb') as temp_file:
+        if source_file.read(2) == b'\x1f\x8b':
+            source_file.close()
+            source_file = gzip_open(source_path, 'rb')
         for start_pos, end_pos in intervals:
             source_file.seek(start_pos)
             temp_file.write(source_file.read(end_pos - start_pos))

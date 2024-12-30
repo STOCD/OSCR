@@ -24,7 +24,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = "2024.12.22.6"
+    version = "2024.12.30.1"
     __version__ = "1.0"
 
     def __init__(self, log_path: str = "", settings: dict = None):
@@ -382,7 +382,7 @@ class OSCR:
                         f"{llt.year}-{llt.month:02d}-{llt.day:02d}",
                         f"{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}",
                         current_map_and_difficulty[1],
-                        current_file_position,
+                        backwards_file.filesize - backwards_file.get_bytes_read(),
                         current_end_bytes,
                     )
                 )
