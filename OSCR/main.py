@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import timedelta, datetime
 from multiprocessing import Event, Process, Queue
 from multiprocessing.pool import Pool
 import os
@@ -24,7 +24,7 @@ def raise_error(error: BaseException):
 
 
 class OSCR:
-    version = '2024.12.30.2'
+    version = '2025.01.12.1'
     __version__ = '1.0'
 
     def __init__(self, log_path: str = '', settings: dict = None):
@@ -104,11 +104,14 @@ class OSCR:
         log_consumed = True
         try:
             with ReadFileBackwards(log_path, offset) as backwards_file:
-                last_log_time = to_datetime(backwards_file.top.split('::')[0])
+                if len(backwards_file.top) <= 2:
+                    last_log_time = datetime.now() + timedelta(days=1)
+                else:
+                    last_log_time = to_datetime(backwards_file.top.split('::')[0])
                 current_combat.end_time = last_log_time
                 current_combat.file_pos[1] = backwards_file.filesize - offset
                 for line in backwards_file:
-                    if line == '':
+                    if len(line) <= 2:
                         continue
                     time_data, attack_data = line.split('::')
                     splitted_line = attack_data.split(',')
@@ -293,10 +296,13 @@ class OSCR:
         current_line_num = 0
         try:
             with ReadFileBackwards(path) as backwards_file:
-                llt = to_datetime(backwards_file.top.split('::')[0])
+                if len(backwards_file.top) <= 2:
+                    llt = datetime.now() + timedelta(days=1)
+                else:
+                    llt = to_datetime(backwards_file.top.split('::')[0])
                 current_end_bytes = backwards_file.filesize
                 for line in backwards_file:
-                    if line == '':
+                    if len(line) <= 2:
                         continue
                     time_data, attack_data = line.split('::')
                     splitted_line = attack_data.split(',')
