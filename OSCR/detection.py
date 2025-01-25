@@ -118,10 +118,13 @@ class Detection:
         "Snowman_Q_Boss_Msn_Snowglobe": {
             "map": "Winter Invasion",
             "difficulty": "Normal",
-        }
+        },
     }
 
     # Detect maps based on # of entities
+    # Note for these dicts: Difficulty needs to be ordered from low to high.
+    # e.g. Elite needs to be placed AFTER Advanced else the map detection may
+    # always detect the lower difficulty when the higher difficulty may match.
     MAP_DIFFICULTY_ENTITY_DEATH_COUNTS = {
         "Infected Space": {
             "Advanced": {
@@ -158,6 +161,14 @@ class Detection:
             },
         },
         "Khitomer Space": {
+            "Advanced": {
+                "Space_Borg_Dreadnought_Raidisode_Khitomer_Intro_Boss": 1,
+                "Mission_Raidisode03_Donatra_Borg_Scimitar": 1,
+                "Mission_Borgraid1_Transwarp_02": 2,
+                "Space_Borg_Battleship_Raidisode": 4,
+                "Mission_Borgraid1_Comm_Array": 4,
+                "Space_Borg_Dreadnought_Raidisode": 0,
+            },
             "Elite": {
                 "Space_Borg_Dreadnought_Raidisode_Khitomer_Intro_Boss": 1,
                 "Mission_Raidisode03_Donatra_Borg_Scimitar": 1,
@@ -165,13 +176,6 @@ class Detection:
                 "Space_Borg_Battleship_Raidisode": 4,
                 "Mission_Borgraid1_Comm_Array": 4,
                 "Space_Borg_Dreadnought_Raidisode": 4,
-            },
-            "Advanced": {
-                "Space_Borg_Dreadnought_Raidisode_Khitomer_Intro_Boss": 1,
-                "Mission_Raidisode03_Donatra_Borg_Scimitar": 1,
-                "Mission_Borgraid1_Transwarp_02": 2,
-                "Space_Borg_Battleship_Raidisode": 4,
-                "Mission_Borgraid1_Comm_Array": 4,
             },
         },
         "Hive Space": {
