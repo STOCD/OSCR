@@ -4,6 +4,8 @@ import shutil
 from time import time
 from typing import Iterable
 
+from .constants import MULTILINE_PATCHES, PATCHES
+
 
 def format_timestamp(timestamp: str) -> str:
     '''
@@ -67,15 +69,34 @@ def repair_logfile(path: str, templog_folder_path: str):
     Parameters:
     - :param path: logfile to repair
     """
-    patches = ((b'Rehona, Sister of the Qowat Milat', b'Rehona - Sister of the Qowat Milat'),)
     tempfile_path = f'{templog_folder_path}\\{int(time())}'
     with open(path, 'rb') as log_file, open(tempfile_path, 'wb') as temp_file:
+        multiline_progress = 0
+        multiline_buffer = b''
+        multiline_data = None
         for line in log_file:
+            if multiline_progress > 1:
+                multiline_progress -= 1
+                multiline_buffer += line.strip()
+                continue
+            elif multiline_progress == 1:
+                multiline_progress = 0
+                multiline_buffer += line
+                temp_file.write(multiline_buffer.replace(multiline_data[0], multiline_data[1]))
+                continue
             if line.strip() == b'':
                 continue
-            for broken_string, fixed_string in patches:
+            for broken_string, fixed_string in PATCHES:
                 if broken_string in line:
                     temp_file.write(line.replace(broken_string, fixed_string))
+                    break
+            else:
+                for indentifier, *patch_data in MULTILINE_PATCHES:
+                    if indentifier in line:
+                        multiline_progress = patch_data[2] - 1
+                        multiline_buffer = line.strip()
+                        multiline_data = patch_data
+                        break
                 else:
                     temp_file.write(line)
     shutil.copyfile(tempfile_path, path)

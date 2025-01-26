@@ -21,3 +21,15 @@ LIVE_TABLE_HEADER = (
 
 BANNED_ABILITIES = {
     'Electrical Overload'}
+
+PATCHES = (
+    (b'Rehona, Sister of the Qowat Milat', b'Rehona - Sister of the Qowat Milat'),
+)
+
+# tuple(string in the first line identifying the issue, text with linebreaks removed, replacement
+#       text (replaces text with linebreaks removed), total number of lines the issue spans)
+MULTILINE_PATCHES = (
+    (b'"Nanite Infection',
+     b"Nanite Infection<br>Causes damage to nearby players and Kobayashi Maru",
+     b'"Nanite Infection - Causes damage to nearby players and Kobayashi Maru"', 3),
+)
