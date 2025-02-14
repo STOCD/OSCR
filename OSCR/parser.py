@@ -79,7 +79,7 @@ def analyze_combat(combat: Combat) -> Combat:
 
             # Combat Duration
             # Heals, damage taken and self-damage don't affect combat time
-            if ability_target.name != '*':
+            if ability_target.name != '*' and line.owner_id != line.target_id:
                 try:
                     actor_combat_durations[line.owner_id][1] = timestamp
                 except KeyError:
