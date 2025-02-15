@@ -157,7 +157,7 @@ class Combat:
         - :overview_graph_intervals: maps player handles to their active combat start and end times
         measured in graph points (1 / graph_resolution points per second of the log)
         """
-        combat_duration = (self.end_time - self.start_time).total_seconds()
+        combat_duration = self.meta['player_duration']
         total_damage_out = 0
         total_attacks_in = 0
         total_damage_in = 0
@@ -266,7 +266,8 @@ class Combat:
             if entity_name in critters:
                 critters[entity_name].add_critter(entity.data[8], entity.data[2])
             else:
-                critters[entity_name] = CritterMeta(entity_name, 1, entity.data[8], [entity.data[2]])
+                critters[entity_name] = CritterMeta(
+                        entity_name, 1, entity.data[8], [entity.data[2]])
         self.critters = critters
 
         # contains multiple values when multiple entities identify the same map
