@@ -26,13 +26,13 @@ def check_difficulty_deaths(
             # Map is missing some NPC data - it's invalid.
             return DetectionInfo(False, 'difficulty', (entity_name,), step='existence')
         if required_death_count > 0:
-            valid = required_death_count == entity_metadata.count
+            valid = required_death_count == entity_metadata.deaths
         else:
-            valid = entity_metadata.count != 0
+            valid = entity_metadata.deaths != 0
         if not valid:
             return DetectionInfo(
                     False, 'difficulty', (entity_name,), required_death_count,
-                    entity_metadata.count, 'deaths')
+                    entity_metadata.deaths, 'deaths')
     return DetectionInfo(True, 'difficulty', tuple(difficulty_data.keys()), step='deaths')
 
 
@@ -264,9 +264,9 @@ class Combat:
         for entity in self.damage_in._npc._children:
             entity_name = get_entity_name(entity.data[0][2])
             if entity_name in critters:
-                critters[entity_name].add_critter(entity.data[2])
+                critters[entity_name].add_critter(entity.data[8], entity.data[2])
             else:
-                critters[entity_name] = CritterMeta(entity_name, 1, [entity.data[2]])
+                critters[entity_name] = CritterMeta(entity_name, 1, entity.data[8], [entity.data[2]])
         self.critters = critters
 
         # contains multiple values when multiple entities identify the same map
@@ -290,11 +290,21 @@ class Combat:
         detection_info.append(
                 DetectionInfo(True, 'map', (identificator,), step='existence', map=self.map))
 
+        detected_difficulty = 0
+        matched_difficulty = 0
         for diffic, meta in Detection.MAP_DIFFICULTY_ENTITY_DEATH_COUNTS.get(self.map, {}).items():
+            detected_difficulty += 1
             if detection_meta := check_difficulty_deaths(meta, critters):
+                matched_difficulty += 1
                 self.difficulty = diffic
             detection_meta.difficulty = diffic
             detection_info.append(detection_meta)
+
+        # If difficulty wasn't detection  failed in phase 1, don't try phase 2.
+        if detected_difficulty and not matched_difficulty:
+            self.difficulty = 'Any'
+            self.meta['detection_info'] = detection_info
+            return
 
         for diffic, meta in Detection.MAP_DIFFICULTY_ENTITY_HULL_COUNTS.get(self.map, {}).items():
             if detection_meta := check_difficulty_damage(meta, critters):
