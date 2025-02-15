@@ -27,9 +27,9 @@ class CritterMeta:
     Represents one npc type in a combat.
     """
 
-    __slots__ = ('name', 'count', 'hull_values')
+    __slots__ = ('name', 'count', 'deaths', 'hull_values')
 
-    def __init__(self, name: str, initial_count: int = 0, initial_hull_values: list = []):
+    def __init__(self, name: str, initial_count: int = 0, initial_deaths: int = 0, initial_hull_values: list = []):
         """
         Represents one NPC type in a combat
 
@@ -40,9 +40,10 @@ class CritterMeta:
         """
         self.name = name
         self.count = initial_count
+        self.deaths = initial_deaths
         self.hull_values = initial_hull_values
 
-    def add_critter(self, hull_value: int):
+    def add_critter(self, death: int, hull_value: int):
         """
         Adds an entity to the meta
 
@@ -51,9 +52,10 @@ class CritterMeta:
         """
         self.count += 1
         self.hull_values.append(hull_value)
+        self.deaths += death
 
     def __repr__(self):
-        return f'<CritterMeta "{self.name}">'
+        return f'<CritterMeta "Nane: {self.name} Count: {self.count} Deaths: {self.deaths}">'
 
 
 class DetectionInfo:

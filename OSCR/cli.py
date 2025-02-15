@@ -52,7 +52,7 @@ def analyzation(args, parser: OSCR):
             print(
                     f"Log Duration: {combat.meta['log_duration']}s | "
                     f"Active Player Time: {combat.meta['player_duration']}s")
-            print(', '.join(f'[{c.name} count={c.count}]' for c in combat.critters.values()))
+            print(f'{os.linesep}'.join(f'name={c.name} count={c.count} deaths={c.deaths}' for c in combat.critters.values()))
         if args.analysis:
             player_data = [OVERVIEW_HEADER]
             paddings = list(map(len, OVERVIEW_HEADER))
