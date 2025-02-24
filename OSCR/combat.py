@@ -158,6 +158,8 @@ class Combat:
         measured in graph points (1 / graph_resolution points per second of the log)
         """
         combat_duration = self.meta['player_duration']
+        if combat_duration == 0:
+            return
         total_damage_out = 0
         total_attacks_in = 0
         total_damage_in = 0
