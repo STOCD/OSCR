@@ -20,7 +20,7 @@ def analyze_combat(combat: Combat) -> Combat:
     graph_point_delta = combat.graph_resolution * 1_000_000
     combat_duration_delta = combat.end_time - combat.start_time
     combat_duration_sec = int(combat_duration_delta.total_seconds()) + 1  # round up to full second
-    total_graph_points = int(combat_duration_delta.total_seconds() // combat.graph_resolution + 1)
+    total_graph_points = int(combat_duration_delta.total_seconds() // combat.graph_resolution + 2)
     combat_start = combat.log_data[0].timestamp
     relative_combat_sec = 0
     for line in combat.log_data:
