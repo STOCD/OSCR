@@ -25,7 +25,7 @@ def raise_error(error: BaseException):
 
 class OSCR:
 
-    version = '2025.3.5.0'
+    version = '2025.3.12.0'
     __version__ = '1.0'
 
     def __init__(self, log_path: str = '', settings: dict = None):
@@ -37,6 +37,7 @@ class OSCR:
         self._settings = {
             "combats_to_parse": 10,
             "seconds_between_combats": 100,
+            "combat_min_lines": 20,
             "excluded_event_ids": ["Autodesc.Combatevent.Falling"],
             "graph_resolution": 0.2,
             "templog_folder_path": f"{os.path.dirname(os.path.abspath(__file__))}/~temp_log_files",
@@ -122,7 +123,7 @@ class OSCR:
                     if last_log_time - log_time > combat_delta:
                         current_file_position = backwards_file.filesize - (
                                 backwards_file.get_bytes_read(True) + offset)
-                        if len(current_combat.log_data) >= 20:
+                        if len(current_combat.log_data) >= settings['combat_min_lines']:
                             current_combat.start_time = last_log_time
                             current_combat.file_pos[0] = current_file_position
                             combat_handler(current_combat)
@@ -143,7 +144,7 @@ class OSCR:
                     last_log_time = log_time
                     current_combat.log_data.appendleft(current_line)
             if log_consumed:
-                if len(current_combat.log_data) >= 20:
+                if len(current_combat.log_data) >= settings['combat_min_lines']:
                     current_combat.start_time = log_time
                     current_combat.file_pos[0] = 0
                     combat_handler(current_combat)
@@ -311,7 +312,7 @@ class OSCR:
                     if llt - log_time > combat_delta:
                         current_file_position = backwards_file.filesize - (
                                 backwards_file.get_bytes_read(True))
-                        if current_line_num >= 20:
+                        if current_line_num >= self.settings['combat_min_lines']:
                             combats.append((
                                 combat_id,
                                 current_map_and_difficulty[0],
@@ -333,7 +334,7 @@ class OSCR:
                             current_map_and_difficulty[1] = m['difficulty']
                     current_line_num += 1
                     llt = log_time
-            if current_line_num >= 20:
+            if current_line_num >= self.settings['combat_min_lines']:
                 combats.append((
                     combat_id,
                     current_map_and_difficulty[0],
