@@ -211,7 +211,12 @@ class LiveParser():
                             }
                             if not is_heal and attack_data[5] != '*':
                                 self._players[attacker_id]['combat_start'] = timestamp
-                    if not is_heal and attack_data[5] != '*':
+                    if attack_data[3] == '*' and attack_data[5] == '*':
+                        pass
+                    elif is_heal:
+                        with self._lock:
+                            self._players[attacker_id]['heal'] += magnitude
+                    else:
                         if self._players[attacker_id]['combat_start'] is None:
                             with self._lock:
                                 self._players[attacker_id]['combat_start'] = timestamp
@@ -222,9 +227,6 @@ class LiveParser():
                             self._players[attacker_id]['base_damage_buffer'] += magnitude2
                             if is_kill:
                                 self._players[attacker_id]['kills'] += 1
-                    else:
-                        with self._lock:
-                            self._players[attacker_id]['heal'] += magnitude
                 if player_attacked and not is_shield:
                     if target_id not in self._players:
                         with self._lock:
