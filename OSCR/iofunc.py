@@ -62,7 +62,7 @@ def compose_logfile(
     shutil.copyfile(tempfile_path, target_path)
 
 
-def repair_logfile(path: str, templog_folder_path: str):
+def repair_logfile(path: str, templog_folder_path: str) -> str:
     """
     Replace bugged combatlog lines
 
@@ -99,7 +99,12 @@ def repair_logfile(path: str, templog_folder_path: str):
                         break
                 else:
                     temp_file.write(line)
-    shutil.copyfile(tempfile_path, path)
+    try:
+        shutil.copyfile(tempfile_path, path)
+        res = ''
+    except PermissionError:
+        res = 'PermissionError'
+    return res
 
 
 def reset_temp_folder(path: str):
