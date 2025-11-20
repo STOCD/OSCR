@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "STO-OSCR"
 dependencies = [
-  "numpy>=1.26.1"
+  "numpy==2.2.4"
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 authors = []
 maintainers = []
 description = "Open Source Combatlog Reader for Star Trek Online."
@@ -38,7 +38,3 @@ oscr-cli = "OSCR.cli:main"
 [tool.hatch.version]
 path = "OSCR/main.py"
 pattern = "\\s*version = '(?P<version>.*)'"
-
-[tool.black]
-target-version = ['py38']
-line-length = 100
