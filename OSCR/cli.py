@@ -156,7 +156,7 @@ def open_logfile(parser: OSCR, filepath: str) -> list[tuple]:
     """
     parser.reset_parser()
     path = Path(filepath)
-    parser.log_path = path
+    parser.log_path = str(path)
     return parser.isolate_combats(path, 5)
 
 
@@ -184,7 +184,7 @@ def get_overview_data(combat: Combat, sort_column: int = 1) -> list[list]:
     return data
 
 
-def interactive_cli(args: Namespace):
+def interactive_cli(log_path: str | None = None):
     """
     Executes interactive cli for OSCR.
     """
@@ -194,6 +194,22 @@ def interactive_cli(args: Namespace):
     print(
         '      >>  Open Source Combatlog Reader  <<\n\nWelcome to the interactive CLI of OSCR '
         f'{OSCR.__version__}!\nType "help" for more information, "quit" to quit.')
+    if log_path is not None:
+        path = Path(log_path)
+        if not path.exists() or not path.is_file():
+            print('The specified logfile does not exist. Please choose a different file.')
+        else:
+            raw_combats = open_logfile(parser, path)
+            if len(raw_combats) < 1:
+                print('The specified logfile does not contain any combats.')
+            else:
+                isolated_combats = list()
+                for combat in map(list, raw_combats):
+                    combat[0] += 1
+                    isolated_combats.append(combat[:5])
+                print(format_table(
+                    isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                    ['r', 'l', 'l', 'l', 'l']))
     while True:
         try:
             message = input('(OSCR) ')
@@ -269,6 +285,9 @@ def interactive_cli(args: Namespace):
                         print('Invalid input. If supplied, the argument must be an integer.')
                         continue
                 combat_to_show -= 1
+                if combat_to_show < 0:
+                    print('The combat ID must be at least 1.')
+                    continue
                 if len(parser.combats) > combat_to_show:
                     combat = parser.combats[combat_to_show]
                     data = get_overview_data(combat)
@@ -292,6 +311,11 @@ def interactive_cli(args: Namespace):
                             *convert_datetime(combat.start_time),
                             combat.difficulty if combat.difficulty is not None else ''
                         ])
+                    if combat_to_show >= len(parser.combats):
+                        print(
+                            'The specified combat does not exist in the given logfile. '
+                            'Use "combats" to show available combats.')
+                        continue
                     combat = parser.combats[combat_to_show]
                     data = get_overview_data(combat)
                     formatted_date, formatted_time = convert_datetime(combat.start_time)
@@ -310,24 +334,78 @@ def interactive_cli(args: Namespace):
 
 def main():
     """Main"""
-    argparser = ArgumentParser()
-    argparser
-    argparser.add_argument("-i", "--input", default='')
-    argparser.add_argument("-c", "--count", type=int, default=1)
-    argparser.add_argument("-l", "--list", action=BooleanOptionalAction)
-    argparser.add_argument("-m", "--metadata", action=BooleanOptionalAction)
-    argparser.add_argument("-a", "--analysis", action=BooleanOptionalAction)
-    args = argparser.parse_args()
-    if args.input == '':
-        interactive_cli(args)
-        return
-
-    parser = OSCR(args.input)
-
-    if args.list:
-        list_combats(parser)
-    elif args.analysis or args.metadata:
-        analyzation(args, parser)
+    argparser = ArgumentParser(prog='OSCR', description='CLI for the Open Source Combatlog Reader')
+    argparser.add_argument(
+        '--open', '-o', type=str, required=False, metavar='PATH', help='Selects file to analyze.')
+    argparser.add_argument(
+        '--combats', '-c', type=int, required=False, metavar='ID', nargs='?', const=5,
+        help='Lists given amount of combats from the selected logfile.')
+    argparser.add_argument(
+        '--overview', '--ov', type=int, required=False, metavar='ID', nargs='?', const=1,
+        help='Shows overview table for given combat.')
+    args, _ = argparser.parse_known_args()
+    if args.open is None:
+        if args.combats is None and args.overview is None:
+            interactive_cli()
+        else:
+            print('Could not perform action: --open [PATH] must be specified')
+    elif args.combats is None and args.overview is None:
+        interactive_cli(args.open)
+    else:
+        path = Path(args.open)
+        if not path.exists() or not path.is_file():
+            print('The specified logfile does not exist. Please choose a different file.')
+            return
+        parser = OSCR()
+        isolated_combats = list()
+        if args.combats is not None:
+            raw_combats = parser.isolate_combats(str(path), args.combats)
+            if len(raw_combats) < 1:
+                print('The specified logfile does not contain any combats.')
+                return
+            for combat in map(list, raw_combats):
+                combat[0] += 1
+                isolated_combats.append(combat[:5])
+            if args.overview is None:
+                print(format_table(
+                    isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                    ['r', 'l', 'l', 'l', 'l']))
+        if args.overview is not None:
+            combat_to_show: int = args.overview - 1
+            if combat_to_show < 0:
+                print('The combat ID must be at least 1.')
+                return
+            parser.analyze_log_file(str(path), max_combats=combat_to_show + 1)
+            if combat_to_show >= len(parser.combats):
+                print(
+                    'The specified combat does not exist in the given logfile. '
+                    'Use "--combats" to show available combats.')
+                return
+            if args.combats:
+                combats = list()
+                for combat in parser.combats:
+                    combats.append([
+                        combat.id + 1,
+                        combat.map,
+                        *convert_datetime(combat.start_time),
+                        combat.difficulty if combat.difficulty is not None else ''
+                    ])
+                combats += isolated_combats[combat_to_show:]
+                print(format_table(
+                    combats[:args.combats],
+                    ['ID', 'Map', 'Date', 'Time', 'Difficulty'], ['r', 'l', 'l', 'l', 'l']))
+            combat = parser.combats[combat_to_show]
+            data = get_overview_data(combat)
+            formatted_date, formatted_time = convert_datetime(combat.start_time)
+            if combat.difficulty is None:
+                difficulty = ''
+            else:
+                difficulty = f' ({combat.difficulty})'
+            print(f'[{combat_to_show + 1}] -> {combat.map}{difficulty} '
+                  f'{formatted_date} {formatted_time}')
+            print(format_table(
+                data, OVERVIEW_HEADER_2,
+                ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
 
 
 if __name__ == "__main__":
