@@ -1,17 +1,39 @@
 """ OSCR CLI """
 
-import argparse
+from argparse import ArgumentParser, BooleanOptionalAction, Namespace
 import cProfile
+from datetime import datetime
 import os
+from pathlib import Path
 import pstats
 
 from . import OSCR
+from .combat import Combat
 from .datamodels import OverviewTableRow
 
 
 OVERVIEW_HEADER = (
         'Player', 'DPS', 'Combat Time', 'Combat Time Share', 'Total Damage', 'Debuff',
         'Attacks-in Share', 'Taken Damage Share', 'Damage Share', 'Max One Hit', 'Deaths')
+
+OVERVIEW_HEADER_2 = [
+    'Player', 'DPS', 'Combat Time', 'Combat Time Share', 'Total Damage', 'Debuff',
+    'Attacks-in Share', 'Taken Damage Share', 'Damage Share', 'Deaths']
+
+HELP = """OSCR CLI Usage:
+• help, h
+    Shows this help message.
+• open <file>, o <file>
+    Selects file to analyze.
+• overview <combat>, ov <combat>
+    Analyzes specified combat identified by combat ID and shows
+    overview table. Not specifying a combat will analyze the most
+    recent combat.
+• combats <amount>, c <amount>
+    Shows all combats in selected log file. This may take a
+    while for bigger log files.
+• quit, q
+    Exits the interactive mode and ends the program."""
 
 
 def format_overview_row(row: OverviewTableRow):
@@ -52,7 +74,8 @@ def analyzation(args, parser: OSCR):
             print(
                     f"Log Duration: {combat.meta['log_duration']}s | "
                     f"Active Player Time: {combat.meta['player_duration']}s")
-            print(f'{os.linesep}'.join(f'name={c.name} count={c.count} deaths={c.deaths}' for c in combat.critters.values()))
+            print(f'{os.linesep}'.join(f'name={c.name} count={c.count} deaths={c.deaths}'
+                                       for c in combat.critters.values()))
         if args.analysis:
             player_data = [OVERVIEW_HEADER]
             paddings = list(map(len, OVERVIEW_HEADER))
@@ -65,21 +88,238 @@ def analyzation(args, parser: OSCR):
                 print(' | '.join(f'{el:>{pad}}' for el, pad in zip(row, paddings)))
 
 
+def convert_datetime(dt: datetime) -> tuple[str, str]:
+    """
+    Extracts date and time from datetime object and returns them separately in formatted form.
+    """
+    return (f'{dt.year}-{dt.month:02d}-{dt.day:02d}',
+            f'{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}')
+
+
+def format_table(table: list[list[str]], header: list[str], column_alignment: list[str]) -> str:
+    """
+    Puts table consisting of nested lists into str format for output on the terminal. Truncates
+    width of table if it is wider than the current terminal width.
+
+    Parameters:
+    - :param table: table to convert; outer list contains rows, each inner list contains the
+    columns for that row; each row must be of the same length and match the length of `header`
+    - :param header: labels for the column heading
+    - :param column_alignment: `r` or `l` to align column content except header right or left,
+    respectively; any other value will center-align the content; must match the length of `header`
+    """
+    column_widths = [len(e) for e in header]
+    output = list()
+    for row in table:
+        for i, item in enumerate(row):
+            column_widths[i] = max(column_widths[i], len(str(item)))  # TODO unify type beforehand
+    border = '┌'
+    for width in column_widths:
+        border += '─' * width + '┬'
+    border = border[:-1] + '┐'
+    output.append(border)
+    formatted_row = ''
+    for item, width in zip(header, column_widths):
+        formatted_row += f'│{item:^{width}}'
+    output.append(formatted_row + '│')
+    border = '├'
+    for width in column_widths:
+        border += '─' * width + '┼'
+    border = border[:-1] + '┤'
+    output.append(border)
+    for row in table:
+        formatted_row = ''
+        for column, item in enumerate(row):
+            match column_alignment[column]:
+                case 'l':
+                    formatted_row += f'│{item:<{column_widths[column]}}'
+                case 'r':
+                    formatted_row += f'│{item:>{column_widths[column]}}'
+                case _:
+                    formatted_row += f'│{item:^{column_widths[column]}}'
+        output.append(formatted_row + '│')
+    border = '└'
+    for width in column_widths:
+        border += '─' * width + '┴'
+    border = border[:-1] + '┘'
+    output.append(border)
+    width = max(69, os.get_terminal_size().columns - 1)
+    if width < len(output[0]):
+        return '\n'.join(map(lambda row: row[:width], output))
+    else:
+        return '\n'.join(output)
+
+
+def open_logfile(parser: OSCR, filepath: str) -> list[tuple]:
+    """
+    Opens specified logfile in OSCR and returns the most recent isolated combats (max 5).
+    """
+    parser.reset_parser()
+    path = Path(filepath)
+    parser.log_path = path
+    return parser.isolate_combats(path, 5)
+
+
+def get_overview_data(combat: Combat, sort_column: int = 1) -> list[list]:
+    """
+    """
+    player_data = [p for p in combat.players.values()]
+    if sort_column != 0:
+        sort_column += 1
+    player_data.sort(key=lambda row: row[sort_column], reverse=True)
+    data = list()
+    for player in player_data:
+        data.append([
+            player.name + player.handle,
+            f'{player.DPS:,.2f}',
+            f'{player.combat_time:.1f}s',
+            f'{player.combat_time_share * 100:.2f}%',
+            f'{player.total_damage:,.2f}',
+            f'{player.debuff * 100:.2f}%',
+            f'{player.attacks_in_share * 100:.2f}%',
+            f'{player.taken_damage_share * 100:.2f}%',
+            f'{player.damage_share * 100:.2f}%',
+            f'{player.deaths}'
+        ])
+    return data
+
+
+def interactive_cli(args: Namespace):
+    """
+    Executes interactive cli for OSCR.
+    """
+    parser = OSCR()
+    # TODO this needs to be integrated into OSCR, but that requires a rewrite
+    isolated_combats = list()
+    print(
+        '      >>  Open Source Combatlog Reader  <<\n\nWelcome to the interactive CLI of OSCR '
+        f'{OSCR.__version__}!\nType "help" for more information, "quit" to quit.')
+    while True:
+        try:
+            message = input('(OSCR) ')
+        except EOFError:
+            break
+        action, *arguments = message.split(' ')
+        if ''.join(arguments) == '':
+            arguments = []
+        match action:
+            case 'q' | 'quit':
+                break
+            case 'h' | 'help':
+                print(HELP)
+            case 'open' | 'o':
+                path = Path(''.join(arguments))
+                if not path.exists() or not path.is_file():
+                    print('The specified logfile does not exist. Please choose a different file.')
+                    continue
+                raw_combats = open_logfile(parser, path)
+                if len(raw_combats) < 1:
+                    print('The specified logfile does not contain any combats.')
+                    continue
+                isolated_combats = list()
+                for combat in map(list, raw_combats):
+                    combat[0] += 1
+                    isolated_combats.append(combat[:5])
+                print(format_table(
+                    isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                    ['r', 'l', 'l', 'l', 'l']))
+            case 'combats' | 'c':
+                combats_to_show = 1
+                default_combat_num = False
+                if len(arguments) > 0:
+                    try:
+                        combats_to_show = int(arguments[0])
+                    except ValueError:
+                        print('Invalid input. If supplied, the argument must be an integer.')
+                        continue
+                else:
+                    default_combat_num = True
+                    if len(isolated_combats) > 0:
+                        print(format_table(
+                            isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                            ['r', 'l', 'l', 'l', 'l']))
+                        continue
+                if len(isolated_combats) >= combats_to_show:
+                    print(format_table(
+                        isolated_combats[:combats_to_show],
+                        ['ID', 'Map', 'Date', 'Time', 'Difficulty'], ['r', 'l', 'l', 'l', 'l']))
+                else:
+                    if parser.log_path == '':
+                        print('No logfile specified. Please open a logfile first.')
+                        continue
+                    else:
+                        if default_combat_num:
+                            combats_to_show = 5
+                        raw_combats = parser.isolate_combats(parser.log_path, combats_to_show)
+                        if len(raw_combats) < 1:
+                            print('The specified logfile does not contain any combats.')
+                            continue
+                        for combat in map(list, raw_combats[len(isolated_combats):]):
+                            combat[0] += 1
+                            isolated_combats.append(combat[:5])
+                        print(format_table(
+                            isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                            ['r', 'l', 'l', 'l', 'l']))
+            case 'overview' | 'ov':
+                combat_to_show = 1
+                if len(arguments) > 0:
+                    try:
+                        combat_to_show = int(arguments[0])
+                    except ValueError:
+                        print('Invalid input. If supplied, the argument must be an integer.')
+                        continue
+                combat_to_show -= 1
+                if len(parser.combats) > combat_to_show:
+                    combat = parser.combats[combat_to_show]
+                    data = get_overview_data(combat)
+                    formatted_date, formatted_time = convert_datetime(combat.start_time)
+                    if combat.difficulty is None:
+                        difficulty = ''
+                    else:
+                        difficulty = f' ({combat.difficulty})'
+                    print(f'[{combat_to_show + 1}] -> {combat.map}{difficulty} '
+                          f'{formatted_date} {formatted_time}')
+                    print(format_table(
+                        data, OVERVIEW_HEADER_2,
+                        ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
+                else:
+                    parser.analyze_log_file(max_combats=combat_to_show - len(parser.combats) + 1)
+                    isolated_combats = list()
+                    for combat in parser.combats:
+                        isolated_combats.append([
+                            combat.id + 1,
+                            combat.map,
+                            *convert_datetime(combat.start_time),
+                            combat.difficulty if combat.difficulty is not None else ''
+                        ])
+                    combat = parser.combats[combat_to_show]
+                    data = get_overview_data(combat)
+                    formatted_date, formatted_time = convert_datetime(combat.start_time)
+                    if combat.difficulty is None:
+                        difficulty = ''
+                    else:
+                        difficulty = f' ({combat.difficulty})'
+                    print(f'[{combat_to_show + 1}] -> {combat.map}{difficulty} '
+                          f'{formatted_date} {formatted_time}')
+                    print(format_table(
+                        data, OVERVIEW_HEADER_2,
+                        ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
+            case _:
+                continue
+
+
 def main():
     """Main"""
-    argparser = argparse.ArgumentParser()
+    argparser = ArgumentParser()
+    argparser
     argparser.add_argument("-i", "--input", default='')
     argparser.add_argument("-c", "--count", type=int, default=1)
-    argparser.add_argument("-l", "--list", action=argparse.BooleanOptionalAction)
-    argparser.add_argument("-m", "--metadata", action=argparse.BooleanOptionalAction)
-    argparser.add_argument("-a", "--analysis", action=argparse.BooleanOptionalAction)
+    argparser.add_argument("-l", "--list", action=BooleanOptionalAction)
+    argparser.add_argument("-m", "--metadata", action=BooleanOptionalAction)
+    argparser.add_argument("-a", "--analysis", action=BooleanOptionalAction)
     args = argparser.parse_args()
     if args.input == '':
-        print(
-                'OSCR CLI Options:\n--input / -i: logfile path (mandatory)\n--list / -l: list all '
-                'combats in logfile\n--count / -c: number of combats to analyze (for use with -m '
-                'and -a)\n--metadata / -m: shows metadata of combats\n--analysis / -a: show combat '
-                'analysis overview')
+        interactive_cli(args)
         return
 
     parser = OSCR(args.input)
