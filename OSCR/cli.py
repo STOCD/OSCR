@@ -30,8 +30,8 @@ HELP = """OSCR CLI Usage:
     overview table. Not specifying a combat will analyze the most
     recent combat.
 • combats <amount>, c <amount>
-    Shows all combats in selected log file. This may take a
-    while for bigger log files.
+    Shows specified amount of combats in selected logfile. Shows
+    all combats in selected log file if no argument is given.
 • quit, q
     Exits the interactive mode and ends the program."""
 
