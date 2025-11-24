@@ -284,7 +284,7 @@ def main():
         '--combats', '-c', type=int, required=False, metavar='ID', nargs='?', const=5,
         help='Lists given amount of combats from the selected logfile.')
     argparser.add_argument(
-        '--overview', '--ov', type=int, required=False, metavar='ID', nargs='?', const=1,
+        '--overview', '-ov', type=int, required=False, metavar='ID', nargs='?', const=1,
         help='Shows overview table for given combat.')
     args, _ = argparser.parse_known_args()
     if args.open is None:
