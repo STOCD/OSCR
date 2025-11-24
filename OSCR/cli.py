@@ -194,7 +194,7 @@ def produce_overview_data(parser: OSCR, isolated_combats: list[list], combat_id:
         if combat_id >= len(parser.combats):
             print(
                 'The specified combat does not exist in the given logfile. '
-                'Use "combats" to show available combats.')
+                'Use "combats" / "--combats" to show available combats.')
             return []
     combat = parser.combats[combat_id]
     return get_overview_data(combat)
@@ -286,57 +286,28 @@ def main():
     elif args.combats is None and args.overview is None:
         interactive_cli(args.open)
     else:
-        path = Path(args.open)
-        if not path.exists() or not path.is_file():
-            print('The specified logfile does not exist. Please choose a different file.')
-            return
         parser = OSCR()
         isolated_combats = list()
-        if args.combats is not None:
-            raw_combats = parser.isolate_combats(str(path), args.combats)
-            if len(raw_combats) < 1:
-                print('The specified logfile does not contain any combats.')
-                return
-            for combat in map(list, raw_combats):
-                combat[0] += 1
-                isolated_combats.append(combat[:5])
-            if args.overview is None:
-                print(format_table(
-                    isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
-                    ['r', 'l', 'l', 'l', 'l']))
-        if args.overview is not None:
+        combats_to_show = 5
+        if args.combats is not None and args.combats > 0:
+            combats_to_show = args.combats
+        if not open_logfile(parser, isolated_combats, args.open, combats_to_show):
+            return
+        if args.overview is None:
+            print(format_table(
+                isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                ['r', 'l', 'l', 'l', 'l']))
+        else:
             combat_to_show: int = args.overview - 1
             if combat_to_show < 0:
                 print('The combat ID must be at least 1.')
                 return
-            parser.analyze_log_file(str(path), max_combats=combat_to_show + 1)
-            if combat_to_show >= len(parser.combats):
-                print(
-                    'The specified combat does not exist in the given logfile. '
-                    'Use "--combats" to show available combats.')
-                return
-            if args.combats:
-                combats = list()
-                for combat in parser.combats:
-                    combats.append([
-                        combat.id + 1,
-                        combat.map,
-                        *convert_datetime(combat.start_time),
-                        combat.difficulty if combat.difficulty is not None else ''
-                    ])
-                combats += isolated_combats[combat_to_show + 1:]
+            data = produce_overview_data(parser, isolated_combats, combat_to_show)
+            if args.combats is not None:
                 print(format_table(
-                    combats[:args.combats],
+                    isolated_combats[:combats_to_show],
                     ['ID', 'Map', 'Date', 'Time', 'Difficulty'], ['r', 'l', 'l', 'l', 'l']))
-            combat = parser.combats[combat_to_show]
-            data = get_overview_data(combat)
-            formatted_date, formatted_time = convert_datetime(combat.start_time)
-            if combat.difficulty is None:
-                difficulty = ''
-            else:
-                difficulty = f' ({combat.difficulty})'
-            print(f'[{combat_to_show + 1}] -> {combat.map}{difficulty} '
-                  f'{formatted_date} {formatted_time}')
+            print_combat_announcer(parser.combats[combat_to_show])
             print(format_table(
                 data, OVERVIEW_HEADER,
                 ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
