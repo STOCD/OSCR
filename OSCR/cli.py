@@ -263,6 +263,7 @@ def interactive_cli(log_path: str | None = None):
                     data, OVERVIEW_HEADER,
                     ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
             case _:
+                print('Invalid command. Enter "help" to see available commands.')
                 continue
 
 
