@@ -333,7 +333,7 @@ def main():
                         *convert_datetime(combat.start_time),
                         combat.difficulty if combat.difficulty is not None else ''
                     ])
-                combats += isolated_combats[combat_to_show:]
+                combats += isolated_combats[combat_to_show + 1:]
                 print(format_table(
                     combats[:args.combats],
                     ['ID', 'Map', 'Date', 'Time', 'Difficulty'], ['r', 'l', 'l', 'l', 'l']))
