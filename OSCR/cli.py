@@ -93,14 +93,26 @@ def format_table(table: list[list[str]], header: list[str], column_alignment: li
         return '\n'.join(output)
 
 
-def open_logfile(parser: OSCR, filepath: str) -> list[tuple]:
+def open_logfile(
+        parser: OSCR, isolated_combats: list[list], logfile_path: str,
+        max_combats: int = 5) -> bool:
     """
-    Opens specified logfile in OSCR and returns the most recent isolated combats (max 5).
     """
+    path = Path(logfile_path)
+    if not path.exists() or not path.is_file():
+        print('The specified logfile does not exist. Please choose a different file.')
+        return False
     parser.reset_parser()
-    path = Path(filepath)
-    parser.log_path = str(path)
-    return parser.isolate_combats(path, 5)
+    parser.log_path = logfile_path
+    raw_combats = parser.isolate_combats(logfile_path, max_combats)
+    if len(raw_combats) < 1:
+        print('The specified logfile does not contain any combats.')
+        return False
+    isolated_combats.clear()
+    for combat in map(list, raw_combats):
+        combat[0] += 1
+        isolated_combats.append(combat[:5])
+    return True
 
 
 def get_overview_data(combat: Combat, sort_column: int = 1) -> list[list]:
@@ -127,6 +139,79 @@ def get_overview_data(combat: Combat, sort_column: int = 1) -> list[list]:
     return data
 
 
+def interpret_combat_argument(args: list[str], available_count: int) -> int:
+    """
+    """
+    count = 0
+    if len(args) > 0:
+        try:
+            count = int(args[0])
+        except ValueError:
+            print(
+                'Invalid input. If supplied, the argument must be an integer. '
+                'Using default value...')
+    if count > 0:
+        return count
+    elif available_count > 0:
+        return available_count
+    else:
+        return count
+
+
+def get_combats(parser: OSCR, isolated_combats: list[list], max_combats: int = 5) -> bool:
+    """
+    """
+    if parser.log_path == '':
+        print('No logfile specified. Please open a logfile first.')
+        return False
+    else:
+        raw_combats = parser.isolate_combats(parser.log_path, max_combats)
+        if len(raw_combats) < 1:
+            print('The specified logfile does not contain any combats.')
+            return False
+        for combat in map(list, raw_combats[len(isolated_combats):]):
+            combat[0] += 1
+            isolated_combats.append(combat[:5])
+    return True
+
+
+def produce_overview_data(parser: OSCR, isolated_combats: list[list], combat_id: int) -> list[list]:
+    """
+    """
+    if combat_id >= len(parser.combats):
+        parser.analyze_log_file(max_combats=combat_id - len(parser.combats) + 1)
+        for id, combat in enumerate(parser.combats):
+            combat_summary = [
+                combat.id + 1,
+                combat.map,
+                *convert_datetime(combat.start_time),
+                combat.difficulty if combat.difficulty is not None else ''
+            ]
+            if id < len(isolated_combats):
+                isolated_combats[id] = combat_summary
+            else:
+                isolated_combats.append(combat_summary)
+        if combat_id >= len(parser.combats):
+            print(
+                'The specified combat does not exist in the given logfile. '
+                'Use "combats" to show available combats.')
+            return []
+    combat = parser.combats[combat_id]
+    return get_overview_data(combat)
+
+
+def print_combat_announcer(combat: Combat):
+    """
+    """
+    formatted_date, formatted_time = convert_datetime(combat.start_time)
+    if combat.difficulty is None:
+        difficulty = ''
+    else:
+        difficulty = f' ({combat.difficulty})'
+    print(f'[{combat.id + 1}] -> {combat.map}{difficulty} '
+          f'{formatted_date} {formatted_time}')
+
+
 def interactive_cli(log_path: str | None = None):
     """
     Executes interactive cli for OSCR.
@@ -137,22 +222,10 @@ def interactive_cli(log_path: str | None = None):
     print(
         '      >>  Open Source Combatlog Reader  <<\n\nWelcome to the interactive CLI of OSCR '
         f'{OSCR.__version__}!\nType "help" for more information, "quit" to quit.')
-    if log_path is not None:
-        path = Path(log_path)
-        if not path.exists() or not path.is_file():
-            print('The specified logfile does not exist. Please choose a different file.')
-        else:
-            raw_combats = open_logfile(parser, path)
-            if len(raw_combats) < 1:
-                print('The specified logfile does not contain any combats.')
-            else:
-                isolated_combats = list()
-                for combat in map(list, raw_combats):
-                    combat[0] += 1
-                    isolated_combats.append(combat[:5])
-                print(format_table(
-                    isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
-                    ['r', 'l', 'l', 'l', 'l']))
+    if log_path is not None and open_logfile(parser, isolated_combats, log_path):
+        print(format_table(
+            isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+            ['r', 'l', 'l', 'l', 'l']))
     while True:
         try:
             message = input('(OSCR) ')
@@ -167,110 +240,28 @@ def interactive_cli(log_path: str | None = None):
             case 'h' | 'help':
                 print(HELP)
             case 'open' | 'o':
-                path = Path(''.join(arguments))
-                if not path.exists() or not path.is_file():
-                    print('The specified logfile does not exist. Please choose a different file.')
-                    continue
-                raw_combats = open_logfile(parser, path)
-                if len(raw_combats) < 1:
-                    print('The specified logfile does not contain any combats.')
-                    continue
-                isolated_combats = list()
-                for combat in map(list, raw_combats):
-                    combat[0] += 1
-                    isolated_combats.append(combat[:5])
-                print(format_table(
-                    isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
-                    ['r', 'l', 'l', 'l', 'l']))
+                if open_logfile(parser, isolated_combats, ''.join(arguments)):
+                    print(format_table(
+                        isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
+                        ['r', 'l', 'l', 'l', 'l']))
             case 'combats' | 'c':
-                combats_to_show = 1
-                default_combat_num = False
-                if len(arguments) > 0:
-                    try:
-                        combats_to_show = int(arguments[0])
-                    except ValueError:
-                        print('Invalid input. If supplied, the argument must be an integer.')
-                        continue
-                else:
-                    default_combat_num = True
-                    if len(isolated_combats) > 0:
-                        print(format_table(
-                            isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
-                            ['r', 'l', 'l', 'l', 'l']))
-                        continue
+                combats_to_show = interpret_combat_argument(arguments, len(isolated_combats))
                 if len(isolated_combats) >= combats_to_show:
                     print(format_table(
                         isolated_combats[:combats_to_show],
                         ['ID', 'Map', 'Date', 'Time', 'Difficulty'], ['r', 'l', 'l', 'l', 'l']))
                 else:
-                    if parser.log_path == '':
-                        print('No logfile specified. Please open a logfile first.')
-                        continue
-                    else:
-                        if default_combat_num:
-                            combats_to_show = 5
-                        raw_combats = parser.isolate_combats(parser.log_path, combats_to_show)
-                        if len(raw_combats) < 1:
-                            print('The specified logfile does not contain any combats.')
-                            continue
-                        for combat in map(list, raw_combats[len(isolated_combats):]):
-                            combat[0] += 1
-                            isolated_combats.append(combat[:5])
+                    if get_combats(parser, isolated_combats, combats_to_show):
                         print(format_table(
                             isolated_combats, ['ID', 'Map', 'Date', 'Time', 'Difficulty'],
                             ['r', 'l', 'l', 'l', 'l']))
             case 'overview' | 'ov':
-                combat_to_show = 1
-                if len(arguments) > 0:
-                    try:
-                        combat_to_show = int(arguments[0])
-                    except ValueError:
-                        print('Invalid input. If supplied, the argument must be an integer.')
-                        continue
-                combat_to_show -= 1
-                if combat_to_show < 0:
-                    print('The combat ID must be at least 1.')
-                    continue
-                if len(parser.combats) > combat_to_show:
-                    combat = parser.combats[combat_to_show]
-                    data = get_overview_data(combat)
-                    formatted_date, formatted_time = convert_datetime(combat.start_time)
-                    if combat.difficulty is None:
-                        difficulty = ''
-                    else:
-                        difficulty = f' ({combat.difficulty})'
-                    print(f'[{combat_to_show + 1}] -> {combat.map}{difficulty} '
-                          f'{formatted_date} {formatted_time}')
-                    print(format_table(
-                        data, OVERVIEW_HEADER,
-                        ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
-                else:
-                    parser.analyze_log_file(max_combats=combat_to_show - len(parser.combats) + 1)
-                    isolated_combats = list()
-                    for combat in parser.combats:
-                        isolated_combats.append([
-                            combat.id + 1,
-                            combat.map,
-                            *convert_datetime(combat.start_time),
-                            combat.difficulty if combat.difficulty is not None else ''
-                        ])
-                    if combat_to_show >= len(parser.combats):
-                        print(
-                            'The specified combat does not exist in the given logfile. '
-                            'Use "combats" to show available combats.')
-                        continue
-                    combat = parser.combats[combat_to_show]
-                    data = get_overview_data(combat)
-                    formatted_date, formatted_time = convert_datetime(combat.start_time)
-                    if combat.difficulty is None:
-                        difficulty = ''
-                    else:
-                        difficulty = f' ({combat.difficulty})'
-                    print(f'[{combat_to_show + 1}] -> {combat.map}{difficulty} '
-                          f'{formatted_date} {formatted_time}')
-                    print(format_table(
-                        data, OVERVIEW_HEADER,
-                        ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
+                combat_to_show = interpret_combat_argument(arguments, 1) - 1
+                data = produce_overview_data(parser, isolated_combats, combat_to_show)
+                print_combat_announcer(parser.combats[combat_to_show])
+                print(format_table(
+                    data, OVERVIEW_HEADER,
+                    ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r']))
             case _:
                 continue
 
