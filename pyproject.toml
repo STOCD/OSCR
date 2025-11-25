@@ -29,7 +29,6 @@ Homepage = "https://github.com/STOCD/OSCR"
 Repository = "https://github.com/STOCD/OSCR.git"
 "Bug Tracker" = "https://github.com/STOCD/OSCR/issues"
 "Website" = "https://stobuilds.com/apps/oscr"
-Releases = "https://github.com/STOCD/OSCR/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["OSCR/"]
