@@ -1,2 +1,5 @@
 .venv
 *.pyc
+venv
+~temp_log_files
+__pycache__
