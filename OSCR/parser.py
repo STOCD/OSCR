@@ -435,7 +435,7 @@ def combine_children_heal_stats(item: TreeItem):
     if isinstance(item.data, (str, tuple)):
         result_data[0] = item.data
     else:
-        result_data[0] = (item.data.name, item.data.handle)
+        result_data[0] = (item.data.name, item.data.handle, item.data.id[0])
     for index in (2, 3, 5, 9, 10, 12, 13):
         result_data[index] = sum(children_data[index])
     result_data[7] = max(children_data[7])  # max_one_heal
