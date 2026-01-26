@@ -29,7 +29,9 @@ class CritterMeta:
 
     __slots__ = ('name', 'count', 'deaths', 'hull_values')
 
-    def __init__(self, name: str, initial_count: int = 0, initial_deaths: int = 0, initial_hull_values: list = []):
+    def __init__(
+            self, name: str, initial_count: int = 0, initial_deaths: int = 0,
+            initial_hull_values: list = []):
         """
         Represents one NPC type in a combat
 
