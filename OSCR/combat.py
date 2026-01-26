@@ -5,8 +5,10 @@ from datetime import datetime
 
 import numpy
 
+from .constants import HEAL_TREE_HEADER, TREE_HEADER
 from .datamodels import CritterMeta, DetectionInfo, LogLine, OverviewTableRow, TreeItem, TreeModel
 from .detection import Detection
+from .export import analysis_table_export
 from .utilities import datetime_to_display, get_entity_name
 
 
@@ -315,6 +317,26 @@ class Combat:
             detection_meta.difficulty = diffic
             detection_info.append(detection_meta)
         self.meta['detection_info'] = detection_info
+
+    def get_export(self) -> dict:
+        analysis_data = dict()
+        analysis_data['version'] = '1'
+        analysis_data['combat_info'] = {
+            'map': self.map,
+            'difficulty': self.difficulty,
+            'time': self.start_time.timestamp(),
+            'log_duration': self.meta['log_duration'],
+            'player_duration': self.meta['player_duration'],
+        }
+        analysis_data['damage_legend'] = list(TREE_HEADER)
+        analysis_data['damage_legend'][0] = 'Ability'
+        analysis_data['heal_legend'] = list(HEAL_TREE_HEADER)
+        analysis_data['heal_legend'][0] = 'Ability'
+        analysis_data['damage_out'] = analysis_table_export(self.damage_out)
+        analysis_data['damage_in'] = analysis_table_export(self.damage_in)
+        analysis_data['heals_out'] = analysis_table_export(self.heals_out)
+        analysis_data['heals_in'] = analysis_table_export(self.heals_in)
+        return analysis_data
 
     def __repr__(self) -> str:
         return (
