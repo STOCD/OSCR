@@ -328,10 +328,15 @@ class Combat:
             'log_duration': self.meta['log_duration'],
             'player_duration': self.meta['player_duration'],
         }
-        analysis_data['damage_legend'] = list(TREE_HEADER)
-        analysis_data['damage_legend'][0] = 'Ability'
-        analysis_data['heal_legend'] = list(HEAL_TREE_HEADER)
-        analysis_data['heal_legend'][0] = 'Ability'
+        analysis_data['column_names'] = dict()
+        analysis_data['column_names']['damage_out'] = list(TREE_HEADER)
+        analysis_data['column_names']['damage_out'][0] = 'Ability'
+        analysis_data['column_names']['damage_in'] = list(TREE_HEADER)
+        analysis_data['column_names']['damage_in'][0] = 'Actor'
+        analysis_data['column_names']['heal_out'] = list(TREE_HEADER)
+        analysis_data['column_names']['heal_out'][0] = 'Ability'
+        analysis_data['column_names']['heal_in'] = list(TREE_HEADER)
+        analysis_data['column_names']['heal_in'][0] = 'Actor'
         analysis_data['damage_out'] = analysis_table_export(self.damage_out)
         analysis_data['damage_in'] = analysis_table_export(self.damage_in)
         analysis_data['heals_out'] = analysis_table_export(self.heals_out)
