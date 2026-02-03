@@ -74,7 +74,6 @@ class OSCR:
         self.log_path = ''
         self.combats = list()
         self.bytes_consumed = 0
-        self.combats_pointer = None
 
     @staticmethod
     def _analyze_log_file(
