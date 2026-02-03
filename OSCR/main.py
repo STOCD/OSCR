@@ -348,7 +348,7 @@ class OSCR:
             else:
                 e.args = (*e.args, 'Error before loop!')
             self.error_callback(e)
-            return tuple()
+            return list()
         return combats
 
     def export_combat(self, combat_num: int, path: str):
