@@ -119,6 +119,10 @@ class Detection:
             "map": "Winter Invasion",
             "difficulty": "Normal",
         },
+        "Dlt_Vaadwaur_Stf_System_Dreadnought_Boss": {
+            "map": "Battle of Korfez",
+            "difficulty": "Elite"
+        }
     }
 
     # Detect maps based on # of entities
