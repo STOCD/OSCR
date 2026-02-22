@@ -24,6 +24,7 @@ BANNED_ABILITIES = {
 
 PATCHES = (
     (b'Rehona, Sister of the Qowat Milat', b'Rehona - Sister of the Qowat Milat'),
+    (b'"Pull Together, Fall Apart"', b'Pull Together - Fall Apart')
 )
 
 # tuple(string in the first line identifying the issue, text with linebreaks removed, replacement
