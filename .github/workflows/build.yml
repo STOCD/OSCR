@@ -2,8 +2,7 @@ name: Build Python Distribution
 
 on:
   release:
-    types:
-      - published
+    types: [published]
 
 jobs:
   build_wheel:
