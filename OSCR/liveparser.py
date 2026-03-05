@@ -105,7 +105,7 @@ class LiveParser():
         first_player_attacks = list()
         last_player_attacks = list()
         for player, player_data in player_copy.items():
-            _, _, handle_part = player.rpartition(' ')
+            _, handle_part = player.split(' ', maxsplit=1)
             index = handle_part.index('@')
             name_and_handle = (handle_part[:index], handle_part[index:-1])
             if player_data['combat_start'] is not None:
