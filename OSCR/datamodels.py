@@ -70,8 +70,9 @@ class DetectionInfo:
             'map', 'difficulty')
 
     def __init__(
-            self, success: bool, type: str = '', identificators: tuple = (), target_value: int = 0,
-            retrieved_value: int = 0, step: str = '', map=None, difficulty=None):
+            self, success: bool, type: str = '', identificators: tuple[str] = (),
+            target_value: int = 0, retrieved_value: int = 0, step: str = '',
+            map: str | None = None, difficulty: str | None = None):
         """
         Stores information on the detection process.
 
@@ -86,14 +87,14 @@ class DetectionInfo:
         - :param map: detected map
         - :param difficulty: detected difficulty
         """
-        self.success = success
-        self.type = type
-        self.identificators = identificators
-        self.target_value = target_value
-        self.retrieved_value = retrieved_value
-        self.step = step
-        self.map = map
-        self.difficulty = difficulty
+        self.success: bool = success
+        self.type: str = type
+        self.identificators: tuple[str] = identificators
+        self.target_value: int = target_value
+        self.retrieved_value: int = retrieved_value
+        self.step: str = step
+        self.map: str | None = map
+        self.difficulty: str | None = difficulty
 
     def __repr__(self):
         return f'<DetectionInfo success={self.success} type={self.type}>'
