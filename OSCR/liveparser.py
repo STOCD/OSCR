@@ -1,8 +1,10 @@
+from collections.abc import Callable
 from copy import deepcopy
 import os
 import time
 from threading import Event, Lock, Thread, Timer
 from types import FunctionType, BuiltinFunctionType, MethodType
+from typing import Any
 
 from .utilities import to_datetime
 
@@ -18,7 +20,10 @@ class LiveParser():
     OSCR's realtime parser
     '''
 
-    def __init__(self, log_path, start_callback=None, update_callback=None, settings: dict = None):
+    def __init__(
+            self, start_callback: Callable[[], Any] | None = None,
+            update_callback: Callable[[dict[tuple, dict], float], Any] | None = None,
+            settings: dict[str] | None = None):
         '''
         Creates LiveParser Instance.
 
@@ -34,13 +39,11 @@ class LiveParser():
             - "seconds_between_combats": number of inactive seconds after which a new engagement
             resets the collected data
         '''
-        if not (os.path.exists(log_path) and os.path.isfile(log_path)):
-            raise FileNotFoundError('Invalid Logpath')
-        self._active = Event()
-        self._lock = Lock()
-        self._players = dict()
-        self._inactive_seconds = 0
-        self._reset = False
+        self._active: Event = Event()
+        self._lock: Lock = Lock()
+        self._players: dict[str, dict[str]] = dict()
+        self._inactive_seconds: float = 0.0
+        self._reset: bool = False
         if isinstance(start_callback, CALLABLE):
             self.start_callback = start_callback
         else:
@@ -49,8 +52,8 @@ class LiveParser():
             self.update_callback = update_callback
         else:
             self.update_callback = _f
-        self._update_timer = Timer(interval=1, function=self.update_data)
-        self.log_path = log_path
+        self._update_timer: Timer = Timer(interval=1, function=self.update_data)
+        self._log_path: str | None = None
         self.settings = {
             'seconds_between_combats': 100
         }
@@ -63,6 +66,24 @@ class LiveParser():
         Stops all active threads when the object is garbage-collected.
         """
         self.stop()
+
+    @property
+    def log_path(self):
+        """Path to logfile the LiveParser will analyze"""
+        return self._log_path
+
+    def set_log_path(self, new_path: str) -> bool:
+        """
+        Sets new log path for LiveParser. Must be called before starting the LiveParser for the
+        first time. Returns `True` if path was accepted, `False` otherwise.
+
+        Parameters:
+        - :param new_path: path to existing logfile
+        """
+        if os.path.isfile(new_path):
+            self._log_path = new_path
+            return True
+        return False
 
     def start(self):
         """
