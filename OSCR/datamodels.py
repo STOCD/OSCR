@@ -339,7 +339,7 @@ class TreeItem():
     def column_count(self):
         return len(self.data)
 
-    def get_data(self, column: int):
+    def get_data(self, column: int) -> tuple[str] | int | float:
         try:
             return self.data[column]
         except IndexError:
