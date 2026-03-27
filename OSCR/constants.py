@@ -33,4 +33,7 @@ MULTILINE_PATCHES = (
     (b'"Nanite Infection',
      b"Nanite Infection<br>Causes damage to nearby players and Kobayashi Maru",
      b'"Nanite Infection - Causes damage to nearby players and Kobayashi Maru"', 3),
+    (b'Superheated Mass-Driver Array',
+     b'"Superheated Mass-Driver Array"',
+     b'Superheated Mass-Driver Array', 2)
 )
