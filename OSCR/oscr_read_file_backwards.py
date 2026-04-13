@@ -28,7 +28,7 @@ class ReadFileBackwards():
         self.filesize = 0
         self._position = -1
         self._remainder = bytes()
-        self._lines = None
+        self._lines: list[str] | None = None
         self._iter_counter = None
 
     @property
@@ -37,7 +37,12 @@ class ReadFileBackwards():
         try:
             return self._lines[-1 - self._iter_counter]
         except IndexError:
-            return None
+            next_chunk = self._get_chunk()
+            if len(next_chunk) == 0:
+                return None
+            else:
+                self._lines = next_chunk + self._lines
+                return self._lines[-1 - self._iter_counter]
 
     @property
     def total_bytes_read(self):

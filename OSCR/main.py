@@ -1,13 +1,13 @@
 from collections.abc import Callable
 from datetime import timedelta, datetime
-from multiprocessing import Event, Process, Queue
+from multiprocessing import Process, Queue
 from multiprocessing.pool import Pool
 import os
 from queue import Empty as EmptyException
 
 from .combat import Combat
 from .constants import BANNED_ABILITIES
-from .datamodels import LogLine, TreeItem
+from .datamodels import LogLine
 from .detection import Detection
 from .iofunc import extract_bytes, reset_temp_folder
 from .oscr_read_file_backwards import ReadFileBackwards
@@ -19,10 +19,6 @@ def _f(*args, **kwargs):
     pass
 
 
-def raise_error(error: BaseException):
-    raise error
-
-
 class OSCR:
 
     __version__ = '11.0.0'
@@ -32,7 +28,7 @@ class OSCR:
         self.combats: list[Combat] = list()
         self.bytes_consumed: int = 0  # -1 would mean entire log has been consumed
         self.combat_analyzed_callback: Callable[[Combat], None] = _f
-        self.error_callback: Callable[[BaseException], None] = raise_error
+        self.task_finished_callback: Callable[[list[int]], None] = _f
         self._settings = {
             "combats_to_parse": 10,
             "seconds_between_combats": 100,
@@ -78,8 +74,7 @@ class OSCR:
     @staticmethod
     def _analyze_log_file(
             log_path: str, total_combats: int, first_combat_id: int, offset: int, settings: dict,
-            combat_handler: Callable[[Combat], None] = _f,
-            error_handler: Callable[[BaseException], None] = raise_error):
+            combat_handler: Callable[[Combat], None] = _f):
         """
         (Internal Function) Reads a logfile, isolates combats and calls `combat_handler` for each
         combat as soon as it has been found.
@@ -93,7 +88,6 @@ class OSCR:
         "graph_resolution"
         - :param combat_handler: Called once for each analyzed combat as soon as the combats
         analyzation is complete
-        - :param error_handler: Called when an error occurs during logfile analyzation
 
         :return: -1 if entire file has been consumed; otherwise next byte to analyze counted from
         the end of the file
@@ -102,66 +96,88 @@ class OSCR:
         combat_id = first_combat_id
         current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
         log_consumed = True
-        try:
-            with ReadFileBackwards(log_path, offset) as backwards_file:
-                if len(backwards_file.top) <= 2:
-                    last_log_time = datetime.now() + timedelta(days=1)
-                else:
-                    last_log_time = to_datetime(backwards_file.top.split('::')[0])
-                current_combat.end_time = last_log_time
-                current_combat.file_pos[1] = backwards_file.filesize - offset
-                for line in backwards_file:
-                    if len(line) <= 2:
-                        continue
+        broken_line_temp: str = ''
+        with ReadFileBackwards(log_path, offset) as backwards_file:
+            if len(backwards_file.top) <= 2:
+                last_log_time = datetime.now() + timedelta(days=1)
+            else:
+                last_log_time = to_datetime(backwards_file.top.split('::')[0])
+            current_combat.end_time = last_log_time
+            current_combat.file_pos[1] = backwards_file.filesize - offset
+            for line in backwards_file:
+                if len(line) <= 2:
+                    continue
+                try:
                     time_data, attack_data = line.split('::')
                     splitted_line = attack_data.split(',')
-                    if splitted_line[6] in BANNED_ABILITIES:
-                        continue
                     log_time = to_datetime(time_data)
-                    if last_log_time - log_time > combat_delta:
-                        current_file_position = backwards_file.filesize - (
-                                backwards_file.get_bytes_read(True) + offset)
-                        if len(current_combat.log_data) >= settings['combat_min_lines']:
-                            current_combat.start_time = last_log_time
-                            current_combat.file_pos[0] = current_file_position
-                            combat_handler(current_combat)
-                            combat_id += 1
-                        if combat_id >= total_combats:
-                            log_consumed = False
-                            new_offset = backwards_file.get_bytes_read(True) + offset
-                            break
-                        current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
-                        current_combat.end_time = log_time
-                        current_combat.file_pos[1] = current_file_position
                     current_line = LogLine(
                         log_time,
                         *splitted_line[:10],
                         float(splitted_line[10]),
-                        float(splitted_line[11]),
+                        float(splitted_line[11])
                     )
-                    last_log_time = log_time
-                    current_combat.log_data.appendleft(current_line)
-            if log_consumed:
-                if len(current_combat.log_data) >= settings['combat_min_lines']:
-                    current_combat.start_time = log_time
-                    current_combat.file_pos[0] = 0
-                    combat_handler(current_combat)
-                new_offset = -1
-        except BaseException as e:
-            if 'line' in locals():
-                e.args = (*e.args, line)
-            else:
-                e.args = (*e.args, 'Error before loop!')
-            error_handler(e)
-            return 0
+                except BaseException:
+                    if broken_line_temp == '':
+                        line_data = line.split('::')
+                    else:
+                        line_data = (line + broken_line_temp).split('::')
+                    if len(line_data) != 2:
+                        broken_line_temp = line + broken_line_temp
+                        continue
+                    log_time = to_datetime(line_data[0])
+                    attack_parts = line_data[1].split(',')
+                    if len(attack_parts) > 12:
+                        splitted_line = attack_parts[:6] + ''.join(attack_parts[6:-5])
+                        splitted_line += attack_parts[-5:]
+                    elif len(attack_parts) < 12:
+                        broken_line_temp = ''
+                        continue
+                    else:
+                        splitted_line = attack_parts
+                    splitted_line[6] = splitted_line[6].replace(os.linesep, '').replace('"', '')
+                    current_line = LogLine(
+                        log_time,
+                        *splitted_line[:10],
+                        float(splitted_line[10]),
+                        float(splitted_line[11])
+                    )
+                    broken_line_temp = ''
+
+                if splitted_line[6] in BANNED_ABILITIES:
+                    continue
+                if last_log_time - log_time > combat_delta:
+                    current_file_position = backwards_file.filesize - (
+                            backwards_file.get_bytes_read(True) + offset)
+                    if len(current_combat.log_data) >= settings['combat_min_lines']:
+                        current_combat.start_time = last_log_time
+                        current_combat.file_pos[0] = current_file_position
+                        combat_handler(current_combat)
+                        combat_id += 1
+                    if combat_id >= total_combats:
+                        log_consumed = False
+                        new_offset = backwards_file.get_bytes_read(True) + offset
+                        break
+                    current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
+                    current_combat.end_time = log_time
+                    current_combat.file_pos[1] = current_file_position
+                last_log_time = log_time
+                current_combat.log_data.appendleft(current_line)
+        if log_consumed:
+            if len(current_combat.log_data) >= settings['combat_min_lines']:
+                current_combat.start_time = log_time
+                current_combat.file_pos[0] = 0
+                combat_handler(current_combat)
+            new_offset = -1
         return new_offset
 
     def analyze_log_file(
             self, log_path: str = '', max_combats: int = -1, offset: int = -1,
-            result_handler: Callable[[Combat], None] = _f):
+            result_handler: Callable[[Combat], None] = _f) -> list[int]:
         """
         Analyzes log file in `self.log_file` and appends analyzed combats to `self.combats`.
         (Can cause duplicate combats to appear, use `self.reset_parser` if analyzing new log file.)
+        Returns list of combat ids that produced warnings during analyzation.
 
         Parameters:
         - :param log_path: log path to be analyzed; overwrites `self.log_path`
@@ -189,9 +205,16 @@ class OSCR:
         if result_handler is not _f:
             self.combat_analyzed_callback = result_handler
         self.bytes_consumed = OSCR._analyze_log_file(
-                self.log_path, total_combats, next_combat_id, offset, self._settings,
-                self.analyze_new_combat, self.error_callback)
-        self.combats = [combat for combat in self.combats if combat is not None]
+            self.log_path, total_combats, next_combat_id, offset, self._settings,
+            self.analyze_new_combat)
+        new_combat_ids = list()
+        for id, combat in enumerate(self.combats[next_combat_id:], next_combat_id):
+            if combat is None:
+                self.combats.remove(None)
+            else:
+                assert combat.id == id
+                new_combat_ids.append(combat.id)
+        return new_combat_ids
 
     def analyze_log_file_mp(
             self, log_path: str = '', max_combats: int = -1, offset: int = -1,
@@ -215,6 +238,7 @@ class OSCR:
                 '"self.log_path" or parameter "log_path" must contain a path to a log file.'
             )
         if self.bytes_consumed < 0:
+            self.task_finished_callback(list())
             return
         next_combat_id = len(self.combats)
         if max_combats < 0:
@@ -230,37 +254,35 @@ class OSCR:
         args = (self._queue, self.log_path, total_combats, next_combat_id, offset, self._settings)
         logfile_process = Process(target=OSCR._analyze_file_helper, args=args)
         logfile_process.start()
-        combats_isolated_num = 0
+        new_combat_ids = list()
         while True:
             try:
                 data = self._queue.get(timeout=15)
             except EmptyException:
                 break
-            if isinstance(data, int):
+            if isinstance(data, Combat):
+                new_combat_ids.append(data.id)
+                self._pool.apply_async(
+                    analyze_combat, args=(data,), callback=self.handle_analyzed_result)
+            else:
                 self.bytes_consumed = data
-                for _ in range(max_combats - combats_isolated_num):
+                for _ in range(max_combats - len(new_combat_ids)):
                     self.combats.pop()
                 break
-            if isinstance(data, BaseException):
-                self._pool.terminate()
-                self.error_callback(data)
-                break
-            else:
-                combats_isolated_num += 1
-                self._pool.apply_async(
-                        analyze_combat, args=(data,), callback=self.handle_analyzed_result,
-                        error_callback=self.error_callback)
         self._pool.close()
+        self.task_finished_callback(sorted(new_combat_ids))
 
     @staticmethod
-    def _analyze_file_helper(queue, log_path, total_combats, first_combat_id, offset, settings):
+    def _analyze_file_helper(
+            queue: Queue, log_path: str, total_combats: int, first_combat_id: int, offset: int,
+            settings: dict[str]):
         """
         Helper method to put return value of function into queue to be sent to main process. Wraps
         `_analyze_log_file`.
         """
         queue.put(OSCR._analyze_log_file(
-                log_path, total_combats, first_combat_id, offset, settings,
-                lambda combat: queue.put(combat), lambda error: queue.put(error)))
+            log_path, total_combats, first_combat_id, offset, settings,
+            lambda combat: queue.put(combat)))
 
     def analyze_new_combat(self, combat: Combat):
         """
@@ -294,60 +316,75 @@ class OSCR:
         combats = list()
         current_end_bytes = -1
         current_line_num = 0
-        try:
-            with ReadFileBackwards(path) as backwards_file:
-                if len(backwards_file.top) <= 2:
-                    llt = datetime.now() + timedelta(days=1)
-                else:
-                    llt = to_datetime(backwards_file.top.split('::')[0])
-                current_end_bytes = backwards_file.filesize
-                for line in backwards_file:
-                    if len(line) <= 2:
-                        continue
+        broken_line_temp = ''
+        with ReadFileBackwards(path) as backwards_file:
+            if len(backwards_file.top) <= 2:
+                llt = datetime.now() + timedelta(days=1)
+            else:
+                llt = to_datetime(backwards_file.top.split('::')[0])
+            current_end_bytes = backwards_file.filesize
+            for line in backwards_file:
+                if len(line) <= 2:
+                    continue
+                try:
                     time_data, attack_data = line.split('::')
                     splitted_line = attack_data.split(',')
+                    assert len(splitted_line) == 12
                     log_time = to_datetime(time_data)
-                    if llt - log_time > combat_delta:
-                        current_file_position = backwards_file.filesize - (
-                                backwards_file.get_bytes_read(True))
-                        if current_line_num >= self._settings['combat_min_lines']:
-                            combats.append((
-                                combat_id,
-                                current_map_and_difficulty[0],
-                                f'{llt.year}-{llt.month:02d}-{llt.day:02d}',
-                                f'{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}',
-                                current_map_and_difficulty[1],
-                                current_file_position,
-                                current_end_bytes))
-                            combat_id += 1
-                        if combat_id >= max_combats > 0:
-                            return combats
-                        current_map_and_difficulty = ['Combat', '']
-                        current_end_bytes = current_file_position
-                        current_line_num = 0
-                    if get_entity_name(splitted_line[5]) in map_identifiers:
-                        m = Detection.MAP_IDENTIFIERS_EXISTENCE[get_entity_name(splitted_line[5])]
-                        current_map_and_difficulty[0] = m['map']
-                        if m['difficulty'] != 'Any':
-                            current_map_and_difficulty[1] = m['difficulty']
-                    current_line_num += 1
-                    llt = log_time
-            if current_line_num >= self._settings['combat_min_lines']:
-                combats.append((
-                    combat_id,
-                    current_map_and_difficulty[0],
-                    f'{llt.year}-{llt.month:02d}-{llt.day:02d}',
-                    f'{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}',
-                    current_map_and_difficulty[1],
-                    backwards_file.filesize - backwards_file.get_bytes_read(),
-                    current_end_bytes))
-        except BaseException as e:
-            if 'line' in locals():
-                e.args = (*e.args, line)
-            else:
-                e.args = (*e.args, 'Error before loop!')
-            self.error_callback(e)
-            return list()
+                except BaseException:
+                    if broken_line_temp == '':
+                        line_data = line.split('::')
+                    else:
+                        line_data = (line + broken_line_temp).split('::')
+                    if len(line_data) != 2:
+                        broken_line_temp = line + broken_line_temp
+                        continue
+                    log_time = to_datetime(line_data[0])
+                    attack_parts = line_data[1].split(',')
+                    if len(attack_parts) > 12:
+                        splitted_line = attack_parts[:6] + ''.join(attack_parts[6:-5])
+                        splitted_line += attack_parts[-5:]
+                    elif len(attack_parts) < 12:
+                        broken_line_temp = ''
+                        continue
+                    else:
+                        splitted_line = attack_parts
+                    splitted_line[6] = splitted_line[6].replace(os.linesep, '').replace('"', '')
+                    broken_line_temp = ''
+                if llt - log_time > combat_delta:
+                    current_file_position = backwards_file.filesize - (
+                            backwards_file.get_bytes_read(True))
+                    if current_line_num >= self._settings['combat_min_lines']:
+                        combats.append((
+                            combat_id,
+                            current_map_and_difficulty[0],
+                            f'{llt.year}-{llt.month:02d}-{llt.day:02d}',
+                            f'{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}',
+                            current_map_and_difficulty[1],
+                            current_file_position,
+                            current_end_bytes))
+                        combat_id += 1
+                    if combat_id >= max_combats > 0:
+                        return combats
+                    current_map_and_difficulty = ['Combat', '']
+                    current_end_bytes = current_file_position
+                    current_line_num = 0
+                if get_entity_name(splitted_line[5]) in map_identifiers:
+                    m = Detection.MAP_IDENTIFIERS_EXISTENCE[get_entity_name(splitted_line[5])]
+                    current_map_and_difficulty[0] = m['map']
+                    if m['difficulty'] != 'Any':
+                        current_map_and_difficulty[1] = m['difficulty']
+                current_line_num += 1
+                llt = log_time
+        if current_line_num >= self._settings['combat_min_lines']:
+            combats.append((
+                combat_id,
+                current_map_and_difficulty[0],
+                f'{llt.year}-{llt.month:02d}-{llt.day:02d}',
+                f'{llt.hour:02d}:{llt.minute:02d}:{llt.second:02d}',
+                current_map_and_difficulty[1],
+                backwards_file.filesize - backwards_file.get_bytes_read(),
+                current_end_bytes))
         return combats
 
     def export_combat(self, combat_num: int, path: str):
