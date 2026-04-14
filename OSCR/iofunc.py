@@ -14,36 +14,38 @@ def format_timestamp(timestamp: str) -> str:
     return timestamp.replace(':', '-', 2).replace(':', '_', 1).split('.')[0]
 
 
-def extract_bytes(source_path: str, target_path: str, start_pos: int, end_pos: int):
+def extract_bytes(source_path: str, target_path: str, start_pos: int, end_pos: int) -> bool:
     """
     Extracts combat from file at `source_path` by copying bytes from `start_pos` (including) up to
-    `end_pos` (not including) to a new file at `target_path`
+    `end_pos` (not including) to a new file at `target_path`. Returns `True` if successful, returns
+    `False` if unsuccessful.
 
     Parameters:
-    - :param source_path: path to source file, must be absolute
-    - :param source_path: path to target_file, must be absolute, will overwrite if it already exists
+    - :param source_path: path to source file
+    - :param source_path: path to target_file, will overwrite if it already exists
     - :param start_pos: first byte from source file to copy
     - :param end_pos: copies data until this byte, not including it
     """
-    if not os.path.isabs(source_path):
-        raise AttributeError(f'source_path is not absolute: {source_path}')
-    if not os.path.isabs(target_path):
-        raise AttributeError(f'target_path is not absolute: {target_path}')
-    with open(source_path, 'rb') as source_file:
-        if source_file.read(2) == b'\x1f\x8b':
-            source_file.close()
-            source_file = gzip_open(source_path, 'rb')
-        source_file.seek(start_pos)
-        extracted_bytes = source_file.read(end_pos - start_pos)
-    with open(target_path, 'wb') as target_file:
-        target_file.write(extracted_bytes)
+    try:
+        with open(source_path, 'rb') as source_file:
+            if source_file.read(2) == b'\x1f\x8b':
+                source_file.close()
+                source_file = gzip_open(source_path, 'rb')
+            source_file.seek(start_pos)
+            extracted_bytes = source_file.read(end_pos - start_pos)
+        with open(target_path, 'wb') as target_file:
+            target_file.write(extracted_bytes)
+        return True
+    except OSError:
+        return False
 
 
 def compose_logfile(
-            source_path: str, target_path: str, intervals: Iterable[tuple[int, int]],
-            templog_folder_path: str):
+        source_path: str, target_path: str, intervals: Iterable[tuple[int, int]],
+        templog_folder_path: str) -> bool:
     """
-    Grabs bytes in given `intervals` from `source_path` and writes them to `target_path`.
+    Grabs bytes in given `intervals` from `source_path` and writes them to `target_path`. Returns
+    `True` if successful, returns `False` if unsuccessful.
 
     Parameters:
     - :param source_path: path to source file, must be absolute
@@ -52,14 +54,18 @@ def compose_logfile(
     - :param templog_folder_path: path to folder used for temporary logfiles
     """
     tempfile_path = f'{templog_folder_path}\\{int(time())}'
-    with open(source_path, 'rb') as source_file, open(tempfile_path, 'wb') as temp_file:
-        if source_file.read(2) == b'\x1f\x8b':
-            source_file.close()
-            source_file = gzip_open(source_path, 'rb')
-        for start_pos, end_pos in intervals:
-            source_file.seek(start_pos)
-            temp_file.write(source_file.read(end_pos - start_pos))
-    shutil.copyfile(tempfile_path, target_path)
+    try:
+        with open(source_path, 'rb') as source_file, open(tempfile_path, 'wb') as temp_file:
+            if source_file.read(2) == b'\x1f\x8b':
+                source_file.close()
+                source_file = gzip_open(source_path, 'rb')
+            for start_pos, end_pos in intervals:
+                source_file.seek(start_pos)
+                temp_file.write(source_file.read(end_pos - start_pos))
+        shutil.copyfile(tempfile_path, target_path)
+        return True
+    except OSError:
+        return False
 
 
 def repair_logfile(path: str, templog_folder_path: str) -> str:
@@ -111,9 +117,6 @@ def reset_temp_folder(path: str):
     '''
     Deletes and re-creates folder housing temporary log files.
     '''
-    if os.path.exists(path):
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        else:
-            raise FileExistsError(f'Expected path to folder, got "{path}"')
+    if os.path.exists(path) and os.path.isdir(path):
+        shutil.rmtree(path)
     os.mkdir(path)

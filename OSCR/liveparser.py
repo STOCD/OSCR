@@ -16,15 +16,15 @@ def _f(*args, **kwargs):
 
 
 class LiveParser():
-    '''
+    """
     OSCR's realtime parser
-    '''
+    """
 
     def __init__(
             self, start_callback: Callable[[], Any] | None = None,
             update_callback: Callable[[dict[tuple, dict], float], Any] | None = None,
             settings: dict[str] | None = None):
-        '''
+        """
         Creates LiveParser Instance.
 
         Parameters:
@@ -38,7 +38,7 @@ class LiveParser():
         - :param settings: contains settings
             - "seconds_between_combats": number of inactive seconds after which a new engagement
             resets the collected data
-        '''
+        """
         self._active: Event = Event()
         self._lock: Lock = Lock()
         self._players: dict[str, dict[str]] = dict()
@@ -180,7 +180,7 @@ class LiveParser():
             logfile.seek(0, 2)
             self._active.set()
             while self._active.is_set():
-                line = logfile.readline()
+                line: str = logfile.readline()
                 if not line:
                     time.sleep(0.5)
                     if self._reset:

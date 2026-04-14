@@ -3,8 +3,8 @@
 from collections import deque
 from datetime import datetime
 
-import numpy
-
+from numpy import linspace as numpy__linspace, percentile as numpy__percentile
+from numpy.typing import NDArray
 from .constants import HEAL_TREE_HEADER, TREE_HEADER
 from .datamodels import CritterMeta, DetectionInfo, LogLine, OverviewTableRow, TreeItem, TreeModel
 from .detection import Detection
@@ -13,7 +13,7 @@ from .utilities import datetime_to_display, get_entity_name
 
 
 def check_difficulty_deaths(
-            difficulty_data: dict, combat_meta: dict[str, CritterMeta]) -> DetectionInfo:
+        difficulty_data: dict, combat_meta: dict[str, CritterMeta]) -> DetectionInfo:
     """
     Check deaths against combat metadata
 
@@ -33,13 +33,13 @@ def check_difficulty_deaths(
             valid = entity_metadata.deaths != 0
         if not valid:
             return DetectionInfo(
-                    False, 'difficulty', (entity_name,), required_death_count,
-                    entity_metadata.deaths, 'deaths')
+                False, 'difficulty', (entity_name,), required_death_count, entity_metadata.deaths,
+                'deaths')
     return DetectionInfo(True, 'difficulty', tuple(difficulty_data.keys()), step='deaths')
 
 
 def check_difficulty_damage(
-            difficulty_data: dict, combat_meta: dict[str, CritterMeta]) -> DetectionInfo:
+        difficulty_data: dict, combat_meta: dict[str, CritterMeta]) -> DetectionInfo:
     """
     Check hull damage taken against combat metadata
 
@@ -56,7 +56,7 @@ def check_difficulty_damage(
         if entity_metadata is None:
             # Map is missing some NPC data - it's invalid.
             return DetectionInfo(False, 'difficulty', step='damage')
-        med = numpy.percentile(entity_metadata.hull_values, 50)
+        med = numpy__percentile(entity_metadata.hull_values, 50)
         low = hull_value * (1 - var)
         valid = low < med
         if not valid:
@@ -92,9 +92,8 @@ class Combat:
         }
         self.players: dict[str, OverviewTableRow] = dict()
         self.critters: dict[str, CritterMeta] = dict()
-        # self.critter_meta: dict = dict()
         self.graph_resolution = graph_resolution
-        self.overview_graphs: dict = dict()
+        self.overview_graphs: dict[str, NDArray] = dict()
         self.damage_out: TreeModel = None
         self.damage_in: TreeModel = None
         self.heals_out: TreeModel = None
@@ -107,8 +106,7 @@ class Combat:
             self.damage_out._root,
             self.damage_in._root,
             self.heals_out._root,
-            self.heals_in._root
-        )
+            self.heals_in._root)
 
     @property
     def description(self):
@@ -116,8 +114,7 @@ class Combat:
             return f'{self.map} {datetime_to_display(self.start_time)}'
         return (
             f'{self.map} ({self.difficulty} Difficulty) at '
-            + datetime_to_display(self.start_time)
-        )
+            + datetime_to_display(self.start_time))
 
     @property
     def duration(self):
@@ -146,7 +143,7 @@ class Combat:
         player.DMG_graph_data = dmg_graph = graph[combat_interval[0]:combat_interval[1] + 1]
         first_graph_time = self.graph_resolution * (combat_interval[0] + 1)
         last_graph_time = self.graph_resolution * (combat_interval[1] + 1)
-        player.graph_time = numpy.linspace(first_graph_time, last_graph_time, len(dmg_graph))
+        player.graph_time = numpy__linspace(first_graph_time, last_graph_time, len(dmg_graph))
         combat_time_array = player.graph_time - self.graph_resolution * combat_interval[0]
         player.DPS_graph_data = dmg_graph.cumsum() / combat_time_array
 
@@ -318,7 +315,7 @@ class Combat:
             detection_info.append(detection_meta)
         self.meta['detection_info'] = detection_info
 
-    def get_export(self) -> dict:
+    def get_export(self) -> dict[str]:
         analysis_data = dict()
         analysis_data['version'] = '1'
         analysis_data['combat_info'] = {
@@ -333,9 +330,9 @@ class Combat:
         analysis_data['column_names']['damage_out'][0] = 'Ability'
         analysis_data['column_names']['damage_in'] = list(TREE_HEADER)
         analysis_data['column_names']['damage_in'][0] = 'Actor'
-        analysis_data['column_names']['heal_out'] = list(TREE_HEADER)
+        analysis_data['column_names']['heal_out'] = list(HEAL_TREE_HEADER)
         analysis_data['column_names']['heal_out'][0] = 'Ability'
-        analysis_data['column_names']['heal_in'] = list(TREE_HEADER)
+        analysis_data['column_names']['heal_in'] = list(HEAL_TREE_HEADER)
         analysis_data['column_names']['heal_in'][0] = 'Actor'
         analysis_data['damage_out'] = analysis_table_export(self.damage_out)
         analysis_data['damage_in'] = analysis_table_export(self.damage_in)
@@ -346,5 +343,4 @@ class Combat:
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__} - Map: {self.map} - Difficulty: {self.difficulty} - "
-            f"Datetime: {self.start_time}>"
-        )
+            f"Datetime: {self.start_time}>")

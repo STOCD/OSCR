@@ -1,6 +1,7 @@
 from collections import namedtuple
 
-import numpy
+from numpy import float64, zeros as numpy__zeros
+from numpy.typing import NDArray
 
 LogLine = namedtuple(
     'LogLine',
@@ -66,8 +67,8 @@ class DetectionInfo:
     """
 
     __slots__ = (
-            'success', 'type', 'identificators', 'target_value', 'retrieved_value', 'step',
-            'map', 'difficulty')
+        'success', 'type', 'identificators', 'target_value', 'retrieved_value', 'step', 'map',
+        'difficulty')
 
     def __init__(
             self, success: bool, type: str = '', identificators: tuple[str] = (),
@@ -104,18 +105,18 @@ class DetectionInfo:
 
 
 class OverviewTableRow:
-    '''
+    """
     Contains a single row of data
-    '''
+    """
 
     __slots__ = (
-            'name', 'handle', 'DPS', 'combat_time', 'combat_time_share', 'total_damage', 'debuff',
-            'attacks_in_share', 'taken_damage_share', 'damage_share', 'max_one_hit', 'crit_chance',
-            'deaths', 'total_heals', 'heal_share', 'heal_crit_chance', 'total_damage_taken',
-            'total_hull_damage_taken', 'total_shield_damage_taken', 'total_attacks',
-            'hull_attacks', 'attacks_in_num', 'heal_crit_num', 'heal_num', 'crit_num', 'misses',
-            'base_damage', 'DMG_graph_data', 'DPS_graph_data', 'graph_time', 'damage_buffer',
-            'combat_interval', 'events', 'build')
+        'name', 'handle', 'DPS', 'combat_time', 'combat_time_share', 'total_damage', 'debuff',
+        'attacks_in_share', 'taken_damage_share', 'damage_share', 'max_one_hit', 'crit_chance',
+        'deaths', 'total_heals', 'heal_share', 'heal_crit_chance', 'total_damage_taken',
+        'total_hull_damage_taken', 'total_shield_damage_taken', 'total_attacks', 'hull_attacks',
+        'attacks_in_num', 'heal_crit_num', 'heal_num', 'crit_num', 'misses', 'base_damage',
+        'DMG_graph_data', 'DPS_graph_data', 'graph_time', 'damage_buffer', 'combat_interval',
+        'events', 'build')
 
     def __init__(self, name: str, handle: str):
         self.name: str = name
@@ -152,7 +153,7 @@ class OverviewTableRow:
         self.damage_buffer: float = 0.0
         self.combat_interval: tuple[float] = None
         self.events: list[str] = list()
-        self.build: str = "Unknown"
+        self.build: str = 'Unknown'
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self.name}{self.handle}>'
@@ -167,32 +168,32 @@ class OverviewTableRow:
 
     def to_dict(self):
         return {
-            "DPS": self.DPS,
-            "name": self.name,
-            "deaths": self.deaths,
-            "debuff": self.debuff,
-            "handle": self.handle,
-            "misses": self.misses,
-            "crit_num": self.crit_num,
-            "heal_num": self.heal_num,
-            "heal_share": self.heal_share,
-            "combat_time": self.combat_time,
-            "crit_chance": self.crit_chance,
-            "max_one_hit": self.max_one_hit,
-            "total_heals": self.total_heals,
-            "damage_share": self.damage_share,
-            "hull_attacks": self.hull_attacks,
-            "total_damage": self.total_damage,
-            "heal_crit_num": self.heal_crit_num,
-            "total_attacks": self.total_attacks,
-            "attacks_in_num": self.attacks_in_num,
-            "attacks_in_share": self.attacks_in_share,
-            "heal_crit_chance": self.heal_crit_chance,
-            "taken_damage_share": self.taken_damage_share,
-            "total_damage_taken": self.total_damage_taken,
-            "total_hull_damage_taken": self.total_hull_damage_taken,
-            "total_shield_damage_taken": self.total_shield_damage_taken,
-            "build": self.build,
+            'DPS': self.DPS,
+            'name': self.name,
+            'deaths': self.deaths,
+            'debuff': self.debuff,
+            'handle': self.handle,
+            'misses': self.misses,
+            'crit_num': self.crit_num,
+            'heal_num': self.heal_num,
+            'heal_share': self.heal_share,
+            'combat_time': self.combat_time,
+            'crit_chance': self.crit_chance,
+            'max_one_hit': self.max_one_hit,
+            'total_heals': self.total_heals,
+            'damage_share': self.damage_share,
+            'hull_attacks': self.hull_attacks,
+            'total_damage': self.total_damage,
+            'heal_crit_num': self.heal_crit_num,
+            'total_attacks': self.total_attacks,
+            'attacks_in_num': self.attacks_in_num,
+            'attacks_in_share': self.attacks_in_share,
+            'heal_crit_chance': self.heal_crit_chance,
+            'taken_damage_share': self.taken_damage_share,
+            'total_damage_taken': self.total_damage_taken,
+            'total_hull_damage_taken': self.total_hull_damage_taken,
+            'total_shield_damage_taken': self.total_shield_damage_taken,
+            'build': self.build,
         }
 
 
@@ -210,10 +211,9 @@ class DamageTableRow(AnalysisTableRow):
     """
 
     __slots__ = (
-            'name', 'handle', 'total_damage', 'max_one_hit', 'kills', 'total_attacks', 'misses',
-            'crit_num', 'flank_num', 'total_shield_damage', 'total_hull_damage',
-            'total_base_damage', 'combat_time', 'hull_attacks', 'shield_attacks' 'id',
-            'combat_start', 'combat_end')
+        'name', 'handle', 'total_damage', 'max_one_hit', 'kills', 'total_attacks', 'misses',
+        'crit_num', 'flank_num', 'total_shield_damage', 'total_hull_damage', 'total_base_damage',
+        'combat_time', 'hull_attacks', 'shield_attacks', 'id', 'combat_start', 'combat_end')
 
     def __init__(self, name: str, handle: str, id: str):
         """
@@ -258,9 +258,9 @@ class HealTableRow(AnalysisTableRow):
     Contains a single row of data in the analysis table.
     """
     __slots__ = (
-            'name', 'handle', 'total_heal', 'hull_heal', 'shield_heal', 'max_one_heal',
-            'heal_ticks', 'critical_heals', 'combat_time', 'hull_heal_ticks', 'shield_heal_ticks',
-            'id', 'combat_start', 'combat_end')
+        'name', 'handle', 'total_heal', 'hull_heal', 'shield_heal', 'max_one_heal', 'heal_ticks',
+        'critical_heals', 'combat_time', 'hull_heal_ticks', 'shield_heal_ticks', 'id',
+        'combat_start', 'combat_end')
 
     def __init__(self, name: str, handle: str, id: str):
         """
@@ -305,8 +305,8 @@ class TreeItem():
         - :param parent: TreeItem that is the parent of this item
         - :param parse_duration: seconds between the first and last line of the combat, rounded up
         """
-        self.data = data
-        self.graph_data = numpy.zeros(parse_duration, numpy.float64)
+        self.data: AnalysisTableRow | tuple = data
+        self.graph_data: NDArray = numpy__zeros(parse_duration, float64)
         self.parent: TreeItem = parent
         self._children: list[TreeItem] = list()
 
@@ -354,15 +354,15 @@ class TreeModel():
     """
 
     def __init__(self, header: tuple[str]):
-        self.actor_index = dict()
+        self.actor_index: dict[str, TreeItem] = dict()
         self.ability_index: dict[tuple, dict[str, TreeItem]] = dict()
-        self.pet_group_index = dict()
-        self.pet_index = dict()
-        self.target_index = dict()
-        self.source_index = dict()
-        self._root = TreeItem(header, None)
-        self._player = TreeItem(['Player'] + [''] * (len(header) - 1), self._root)
-        self._npc = TreeItem(['NPC'] + [''] * (len(header) - 1), self._root)
+        self.pet_group_index: dict[str, TreeItem] = dict()
+        self.pet_index: dict[str, TreeItem] = dict()
+        self.target_index: dict[str, dict[str, dict[str, TreeItem]]] = dict()
+        self.source_index: dict[str, dict[str, TreeItem]] = dict()
+        self._root: TreeItem = TreeItem(header, None)
+        self._player: TreeItem = TreeItem(['Player'] + [''] * (len(header) - 1), self._root)
+        self._npc: TreeItem = TreeItem(['NPC'] + [''] * (len(header) - 1), self._root)
         self._root.append_child(self._player)
         self._root.append_child(self._npc)
 

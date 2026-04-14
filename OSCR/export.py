@@ -1,7 +1,7 @@
 from .datamodels import TreeModel
 
 
-def analysis_table_export(table_model: TreeModel) -> dict:
+def analysis_table_export(table_model: TreeModel) -> dict[str, tuple]:
     """
     Returns only player combat data from table, only considering one hierachy level below the
     player nodes.

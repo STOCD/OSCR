@@ -57,8 +57,7 @@ class OSCR:
         for c in self.combats:
             if c.difficulty:
                 res.append(
-                    f"{c.map} ({c.difficulty} Difficulty) at {datetime_to_display(c.start_time)}"
-                )
+                    f"{c.map} ({c.difficulty} Difficulty) at {datetime_to_display(c.start_time)}")
             else:
                 res.append(f"{c.map} {datetime_to_display(c.start_time)}")
         return res
@@ -74,7 +73,7 @@ class OSCR:
     @staticmethod
     def _analyze_log_file(
             log_path: str, total_combats: int, first_combat_id: int, offset: int, settings: dict,
-            combat_handler: Callable[[Combat], None] = _f):
+            combat_handler: Callable[[Combat], None] = _f) -> int:
         """
         (Internal Function) Reads a logfile, isolates combats and calls `combat_handler` for each
         combat as soon as it has been found.
@@ -148,7 +147,7 @@ class OSCR:
                     continue
                 if last_log_time - log_time > combat_delta:
                     current_file_position = backwards_file.filesize - (
-                            backwards_file.get_bytes_read(True) + offset)
+                        backwards_file.get_bytes_read(True) + offset)
                     if len(current_combat.log_data) >= settings['combat_min_lines']:
                         current_combat.start_time = last_log_time
                         current_combat.file_pos[0] = current_file_position
@@ -173,11 +172,12 @@ class OSCR:
 
     def analyze_log_file(
             self, log_path: str = '', max_combats: int = -1, offset: int = -1,
-            result_handler: Callable[[Combat], None] = _f) -> list[int]:
+            result_handler: Callable[[Combat], None] = _f) -> list[int] | None:
         """
         Analyzes log file in `self.log_file` and appends analyzed combats to `self.combats`.
         (Can cause duplicate combats to appear, use `self.reset_parser` if analyzing new log file.)
-        Returns list of combat ids that produced warnings during analyzation.
+        Returns list of combat ids that were analyzed. Returns `None` if no
+        valid log file is provided or the entire log file has been consumed already.
 
         Parameters:
         - :param log_path: log path to be analyzed; overwrites `self.log_path`
@@ -186,13 +186,10 @@ class OSCR:
         - :param result_handler: Called once for each analyzed combat as soon as the combats
         analyzation is complete
         """
-
         if log_path != '':
             self.log_path = log_path
         elif self.log_path == '':
-            raise AttributeError(
-                '"self.log_path" or parameter "log_path" must contain a path to a log file.'
-            )
+            return
         if self.bytes_consumed < 0:
             return
         next_combat_id = len(self.combats)
@@ -210,19 +207,20 @@ class OSCR:
         new_combat_ids = list()
         for id, combat in enumerate(self.combats[next_combat_id:], next_combat_id):
             if combat is None:
-                self.combats.remove(None)
+                self.combats.pop(id)
             else:
-                assert combat.id == id
-                new_combat_ids.append(combat.id)
+                new_combat_ids.append(id)
         return new_combat_ids
 
     def analyze_log_file_mp(
             self, log_path: str = '', max_combats: int = -1, offset: int = -1,
-            result_handler: Callable[[Combat], None] = _f):
+            result_handler: Callable[[Combat], None] = _f) -> list[int] | None:
         """
         Analyzes log file in `self.log_file` and appends analyzed combats to `self.combats`.
         (Can cause duplicate combats to appear, use `self.reset_parser` if analyzing new log file.)
-        Blocks until given number of combats have been isolated.
+        Blocks until given number of combats have been isolated. Returns list Returns of combat ids
+        that were isolated. Returns `None` if no valid log file is provided or the entire log file
+        has been consumed already.
 
         Parameters:
         - :param log_path: log path to be analyzed; overwrites `self.log_path`
@@ -234,9 +232,7 @@ class OSCR:
         if log_path != '':
             self.log_path = log_path
         elif self.log_path == '':
-            raise AttributeError(
-                '"self.log_path" or parameter "log_path" must contain a path to a log file.'
-            )
+            return
         if self.bytes_consumed < 0:
             self.task_finished_callback(list())
             return
@@ -270,7 +266,9 @@ class OSCR:
                     self.combats.pop()
                 break
         self._pool.close()
-        self.task_finished_callback(sorted(new_combat_ids))
+        new_combat_ids.sort()
+        self.task_finished_callback(new_combat_ids)
+        return new_combat_ids
 
     @staticmethod
     def _analyze_file_helper(
@@ -387,9 +385,9 @@ class OSCR:
                 current_end_bytes))
         return combats
 
-    def export_combat(self, combat_num: int, path: str):
+    def export_combat(self, combat_num: int, path: str) -> bool:
         """
-        Exports combat to new logfile
+        Exports existing combat to new logfile
 
         Parameters:
         - :param combat_num: index of the combat in self.combats
@@ -398,8 +396,5 @@ class OSCR:
         try:
             combat = self.combats[combat_num]
         except IndexError:
-            raise AttributeError(
-                f"Combat #{combat_num} you are trying to save has not been isolated yet."
-                f"Number of isolated combats: {len(self.combats)} -- Use "
-                "OSCR.analyze_log_file() with appropriate arguments first.")
-        extract_bytes(combat.log_file, path, combat.file_pos[0], combat.file_pos[1])
+            return False
+        return extract_bytes(combat.log_file, path, combat.file_pos[0], combat.file_pos[1])
