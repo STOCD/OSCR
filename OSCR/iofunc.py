@@ -4,7 +4,7 @@ import shutil
 from time import time
 from typing import Iterable
 
-from .constants import MULTILINE_PATCHES, PATCHES
+from .constants import PATCHES
 
 
 def format_timestamp(timestamp: str) -> str:
@@ -68,43 +68,56 @@ def compose_logfile(
         return False
 
 
+def fix_line(line: bytes) -> bytes:
+    """
+    Removes emoves escaped commas.
+
+    Parameters:
+    - :param line: line to fix
+    """
+    if b'"' in line:
+        parts = line.split(b'"')
+        if len(parts) == 3:
+            line = parts[0] + parts[1].replace(b', ', b' - ').replace(b',', b' ') + parts[2]
+        else:
+            line = b''.join(parts)
+    return line
+
+
 def repair_logfile(path: str, templog_folder_path: str) -> str:
     """
-    Replace bugged combatlog lines
+    Replace bugged combatlog lines. Returns empty string on success, class name of error on failure.
 
     Parameters:
     - :param path: logfile to repair
     """
-    tempfile_path = f'{templog_folder_path}\\{int(time())}'
+    tempfile_path = os.path.join(templog_folder_path, str(int(time())))
     with open(path, 'rb') as log_file, open(tempfile_path, 'wb') as temp_file:
-        multiline_progress = 0
         multiline_buffer = b''
-        multiline_data = None
         for line in log_file:
-            if multiline_progress > 1:
-                multiline_progress -= 1
-                multiline_buffer += line.strip()
-                continue
-            elif multiline_progress == 1:
-                multiline_progress = 0
-                multiline_buffer += line
-                temp_file.write(multiline_buffer.replace(multiline_data[0], multiline_data[1]))
-                continue
             if line.strip() == b'':
                 continue
+            if multiline_buffer == b'':
+                if b'::' not in line:
+                    continue
+            else:
+                if b'::' in line:
+                    multiline_buffer = b''
             for broken_string, fixed_string in PATCHES:
                 if broken_string in line:
-                    temp_file.write(line.replace(broken_string, fixed_string))
+                    clean_line = line.replace(broken_string, fixed_string)
                     break
             else:
-                for indentifier, *patch_data in MULTILINE_PATCHES:
-                    if indentifier in line:
-                        multiline_progress = patch_data[2] - 1
-                        multiline_buffer = line.strip()
-                        multiline_data = patch_data
-                        break
-                else:
-                    temp_file.write(line)
+                clean_line = line
+            line_parts = (multiline_buffer + clean_line).split(b',')
+            if len(line_parts) == 12:
+                temp_file.write(fix_line(multiline_buffer + clean_line))
+            elif len(line_parts) < 12:
+                multiline_buffer += clean_line.replace(b'\r', b'').replace(b'\n', b'')
+            else:
+                escaped_middle = b'"' + b','.join(line_parts[6:-5]).replace(b'"', b'') + b'"'
+                new_parts = line_parts[:6] + [escaped_middle] + line_parts[-5:]
+                temp_file.write(fix_line(b','.join(new_parts)))
     try:
         shutil.copyfile(tempfile_path, path)
         res = ''

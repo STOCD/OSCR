@@ -127,14 +127,15 @@ class OSCR:
                     log_time = to_datetime(line_data[0])
                     attack_parts = line_data[1].split(',')
                     if len(attack_parts) > 12:
-                        splitted_line = attack_parts[:6] + ''.join(attack_parts[6:-5])
+                        splitted_line = attack_parts[:6] + [''.join(attack_parts[6:-5])]
                         splitted_line += attack_parts[-5:]
                     elif len(attack_parts) < 12:
                         broken_line_temp = ''
                         continue
                     else:
                         splitted_line = attack_parts
-                    splitted_line[6] = splitted_line[6].replace(os.linesep, '').replace('"', '')
+                    splitted_line[6] = (
+                        splitted_line[6].replace('\r', '').replace('\n', '').replace('"', ''))
                     current_line = LogLine(
                         log_time,
                         *splitted_line[:10],

@@ -24,16 +24,4 @@ BANNED_ABILITIES = {
 
 PATCHES = (
     (b'Rehona, Sister of the Qowat Milat', b'Rehona - Sister of the Qowat Milat'),
-    (b'"Pull Together, Fall Apart"', b'Pull Together - Fall Apart')
-)
-
-# tuple(string in the first line identifying the issue, text with linebreaks removed, replacement
-#       text (replaces text with linebreaks removed), total number of lines the issue spans)
-MULTILINE_PATCHES = (
-    (b'"Nanite Infection',
-     b"Nanite Infection<br>Causes damage to nearby players and Kobayashi Maru",
-     b'"Nanite Infection - Causes damage to nearby players and Kobayashi Maru"', 3),
-    (b'Superheated Mass-Driver Array',
-     b'"Superheated Mass-Driver Array"',
-     b'Superheated Mass-Driver Array', 2)
 )
