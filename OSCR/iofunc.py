@@ -70,17 +70,18 @@ def compose_logfile(
 
 def fix_line(line: bytes) -> bytes:
     """
-    Removes emoves escaped commas.
+    Removes escaped commas.
 
     Parameters:
     - :param line: line to fix
     """
     if b'"' in line:
         parts = line.split(b'"')
-        if len(parts) == 3:
-            line = parts[0] + parts[1].replace(b', ', b' - ').replace(b',', b' ') + parts[2]
-        else:
-            line = b''.join(parts)
+        if len(parts) % 2 == 1:
+            line = b''
+            for i in range(1, len(parts), 2):
+                line += parts[i - 1] + parts[i].replace(b', ', b' - ').replace(b',', b' ')
+            line += parts[-1]
     return line
 
 
@@ -110,14 +111,10 @@ def repair_logfile(path: str, templog_folder_path: str) -> str:
             else:
                 clean_line = line
             line_parts = (multiline_buffer + clean_line).split(b',')
-            if len(line_parts) == 12:
-                temp_file.write(fix_line(multiline_buffer + clean_line))
-            elif len(line_parts) < 12:
+            if len(line_parts) < 12:
                 multiline_buffer += clean_line.replace(b'\r', b'').replace(b'\n', b'')
             else:
-                escaped_middle = b'"' + b','.join(line_parts[6:-5]).replace(b'"', b'') + b'"'
-                new_parts = line_parts[:6] + [escaped_middle] + line_parts[-5:]
-                temp_file.write(fix_line(b','.join(new_parts)))
+                temp_file.write(fix_line(multiline_buffer + clean_line))
     try:
         shutil.copyfile(tempfile_path, path)
         res = ''
