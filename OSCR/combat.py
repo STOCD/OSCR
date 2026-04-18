@@ -88,7 +88,8 @@ class Combat:
         self.meta: dict = {
             'log_duration': None,
             'player_duration': None,
-            'detection_info': None  # iterable of DetectionInfo
+            'detection_info': None,  # iterable of DetectionInfo
+            'broken_lines': list()
         }
         self.players: dict[str, OverviewTableRow] = dict()
         self.critters: dict[str, CritterMeta] = dict()

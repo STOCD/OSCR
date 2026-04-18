@@ -96,11 +96,12 @@ class OSCR:
         current_combat = Combat(settings['graph_resolution'], combat_id, log_path)
         log_consumed = True
         broken_line_temp: str = ''
+        broken_lines: list[str] = list()
         with ReadFileBackwards(log_path, offset) as backwards_file:
-            if len(backwards_file.top) <= 2:
-                last_log_time = datetime.now() + timedelta(days=1)
-            else:
+            try:
                 last_log_time = to_datetime(backwards_file.top.split('::')[0])
+            except BaseException:
+                last_log_time = datetime.now() + timedelta(days=1)
             current_combat.end_time = last_log_time
             current_combat.file_pos[1] = backwards_file.filesize - offset
             for line in backwards_file:
@@ -131,6 +132,7 @@ class OSCR:
                         splitted_line += attack_parts[-5:]
                     elif len(attack_parts) < 12:
                         broken_line_temp = ''
+                        broken_lines.append(line + broken_line_temp)
                         continue
                     else:
                         splitted_line = attack_parts
@@ -152,6 +154,8 @@ class OSCR:
                     if len(current_combat.log_data) >= settings['combat_min_lines']:
                         current_combat.start_time = last_log_time
                         current_combat.file_pos[0] = current_file_position
+                        current_combat.meta['broken_lines'] = broken_lines[:30]
+                        broken_lines.clear()
                         combat_handler(current_combat)
                         combat_id += 1
                     if combat_id >= total_combats:
@@ -167,6 +171,7 @@ class OSCR:
             if len(current_combat.log_data) >= settings['combat_min_lines']:
                 current_combat.start_time = log_time
                 current_combat.file_pos[0] = 0
+                current_combat.meta['broken_lines'] = broken_lines[:30]
                 combat_handler(current_combat)
             new_offset = -1
         return new_offset
