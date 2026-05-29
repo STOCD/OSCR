@@ -196,25 +196,26 @@ class LiveParser():
                         self._players = dict()
                     self._reset = False
                 self._inactive_seconds = 0
-                time_data, attack_data = line.split('::')
-                timestamp = to_datetime(time_data).timestamp()
-                attack_data = attack_data.split(',')
-                player_attacks = attack_data[1].startswith("P")
-                player_attacked = attack_data[5].startswith("P") and not attack_data[2]
+                line_data = line.split(',')
+                if len(line_data) != 12:
+                    continue
+                timestamp = to_datetime(line_data[0].split('::')[0]).timestamp()
+                player_attacks = line_data[1].startswith("P")
+                player_attacked = line_data[5].startswith("P") and not line_data[2]
                 if not player_attacks and not player_attacked:
                     continue
-                magnitude = float(attack_data[10])
-                magnitude2 = float(attack_data[11])
-                is_shield = attack_data[8] == 'Shield'
+                magnitude = float(line_data[10])
+                magnitude2 = float(line_data[11])
+                is_shield = line_data[8] == 'Shield'
                 is_heal = (
-                        (is_shield and magnitude < 0 and magnitude2 >= 0)
-                        or (attack_data[8] == 'HitPoints' and magnitude < 0))
-                is_kill = 'Kill' in attack_data[9]
+                    (is_shield and magnitude < 0 and magnitude2 >= 0)
+                    or (line_data[8] == 'HitPoints' and magnitude < 0))
+                is_kill = 'Kill' in line_data[9]
                 magnitude = abs(magnitude)
                 magnitude2 = abs(magnitude2)
 
-                attacker_id = attack_data[1]
-                target_id = attack_data[5]
+                attacker_id = line_data[1]
+                target_id = line_data[5]
 
                 if player_attacks:
                     if attacker_id not in self._players:
@@ -230,9 +231,9 @@ class LiveParser():
                                 'kills': 0,
                                 'deaths': 0
                             }
-                            if not is_heal and attack_data[5] != '*':
+                            if not is_heal and line_data[5] != '*':
                                 self._players[attacker_id]['combat_start'] = timestamp
-                    if attack_data[3] == '*' and attack_data[5] == '*':
+                    if line_data[3] == '*' and line_data[5] == '*':
                         pass
                     elif is_heal:
                         with self._lock:
