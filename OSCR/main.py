@@ -136,15 +136,18 @@ class OSCR:
                         continue
                     else:
                         splitted_line = attack_parts
+                    broken_line_temp = ''
                     splitted_line[6] = (
                         splitted_line[6].replace('\r', '').replace('\n', '').replace('"', ''))
-                    current_line = LogLine(
-                        log_time,
-                        *splitted_line[:10],
-                        float(splitted_line[10]),
-                        float(splitted_line[11])
-                    )
-                    broken_line_temp = ''
+                    try:
+                        current_line = LogLine(
+                            log_time,
+                            *splitted_line[:10],
+                            float(splitted_line[10]),
+                            float(splitted_line[11])
+                        )
+                    except ValueError:
+                        continue
 
                 if splitted_line[6] in BANNED_ABILITIES:
                     continue
